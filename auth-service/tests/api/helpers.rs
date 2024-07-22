@@ -6,6 +6,26 @@ pub struct TestApp {
 }
 
 
+// TODO: See whether rust provides common enum
+// for HTTP status codes
+#[repr(u16)]
+#[derive(PartialEq, Debug, Default, Eq, Hash, Clone)]
+pub enum HttpStatusCode {
+    #[default]
+    OK = 200,
+}
+
+/// Check whether a status code is expected value
+pub fn _assert_eq_status_code(response: &reqwest::Response, http_response_code: HttpStatusCode) {
+    assert_eq!(response.status().as_u16(), http_response_code as u16);
+}
+
+pub fn _assert_eq_response(response: &reqwest::Response, key: &str, expected_value: &str) {
+    // Note that this can raise an error
+    let value = response.headers().get(key).unwrap();
+    assert_eq!(value, expected_value);
+}
+
 impl TestApp {
     pub async fn new() -> Self {
         let app = Application::build("127.0.0.1:0")

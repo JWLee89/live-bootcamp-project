@@ -1,6 +1,38 @@
+use auth_service::routes::SignupResponse;
 use uuid::Uuid;
+use crate::helpers::TestApp;
 
-use crate::helpers::{TestApp};
+
+#[tokio::test]
+async fn should_return_201_if_valid_input() {
+    let app = TestApp::new().await;
+
+    let test_case = serde_json::json!({
+            "password": "password123",
+            "email": get_random_email(),
+            "requires2FA": true
+        });
+    
+    let response = app.signup(&test_case).await;
+    // println!("Response: {:?}", response);
+    assert_eq!(response.status().as_u16(), 201);
+
+    let expected_response = SignupResponse {
+        message: "User created successfully!".to_owned(),
+    };
+
+
+    // Assert that we are getting the correct response body!
+    assert_eq!(
+        response
+            .json::<SignupResponse>()
+            .await
+            .expect("Could not deserialize response body to UserBody"),
+        expected_response
+    );
+
+
+}
 
 
 fn get_random_email() -> String {

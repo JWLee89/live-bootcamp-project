@@ -14,7 +14,9 @@ pub use signup::*;
 pub use verify_2fa::*;
 pub use verify_token::*;
 
-pub fn routes() -> Router {
+use crate::app_state::state::AppState;
+
+pub fn routes() -> Router<AppState> {
     Router::new()
         .nest_service("/", ServeDir::new("assets"))
         .route("/signup", post(signup))

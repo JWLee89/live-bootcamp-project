@@ -1,15 +1,18 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 
-use crate::{app_state::state::AppState, domain::user::User};
+use crate::{app_state::state::AppState, domain::{error::AuthAPIError, user::User}};
 
 
-pub async fn signup(state: State<AppState>, Json(request): Json<SignupRequest>) -> impl IntoResponse {
-    let email = request.email;
-    let requires_2fa = request.requires_2fa;
-    let password = request.password;
-    let user = User::new( email, requires_2fa, Some(password));
-    println!("User: {:?}", user);
+pub async fn signup(state: State<AppState>, Json(request): Json<SignupRequest>) -> Result<impl IntoResponse, AuthAPIError> {
+    // We should do validation elesewhere
+    if request.password.len() < 8 || request.email.is_empty() || !request.email.contains("@") {
+        return Err(AuthAPIError::InvalidCredentials);
+    }
+
+    let user = User::new( request.email, request.requires_2fa, 
+            Some(request.password));
+
     let mut user_store = state.user_store.write().await;
     match user_store.add_user(user) {
         // TODO: Have common messaging object to generate messages.
@@ -17,15 +20,12 @@ pub async fn signup(state: State<AppState>, Json(request): Json<SignupRequest>) 
             let response = Json(SignupResponse {
                 message: "User created successfully!".to_string(),
             });
-            (StatusCode::CREATED, response)
+            Ok((StatusCode::CREATED, response))
         },
         // Might be better to return more meaningful message later on
         // Maybe there is also a better way to do this.
         Err(_) => {
-            let response = Json(SignupResponse{
-                message: "Failed to create user".to_string(),
-            });
-            (StatusCode::UNPROCESSABLE_ENTITY, response)
+            Err(AuthAPIError::UserAlreadyExists)
         }
     }
 }

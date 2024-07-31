@@ -70,6 +70,7 @@ mod tests {
     #[test_case("username".to_owned(), "test_email".to_owned(), false)]
     #[test_case("new_user".to_owned(), "teemo@gmail.com".to_owned(), true)]
     fn test_add_user(username: String, email: String, requires_2fa: bool) {
+        // TODO add username
         let user = User::new(email.clone(), requires_2fa, None);
         let mut user_store = empty_hashmap_user_store();
         assert_eq!(user_store.count(), 0);

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use auth_service::{app_state::state::{AppState, UserStoreType}, services::hashmap_user_store::HashMapUserStore, Application};
 use tokio::sync::RwLock;
 
@@ -29,11 +31,8 @@ pub fn _assert_eq_response(response: &reqwest::Response, key: &str, expected_val
 
 impl TestApp {
     pub async fn new() -> Self {
-        let store = RwLock::new(HashMapUserStore::default());
-        let user_store = UserStoreType::new(
-            store
-        );
-        let app_state: AppState = AppState::new(user_store);
+        let store: Arc<RwLock<HashMapUserStore>> = Arc::new(RwLock::new(HashMapUserStore::default()));
+        let app_state: AppState = AppState::new(store);
         let app = Application::build(app_state, "0.0.0.0:0")
             .await
             .expect("Failed to build app");

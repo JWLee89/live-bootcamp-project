@@ -14,7 +14,7 @@ pub async fn signup(state: State<AppState>, Json(request): Json<SignupRequest>) 
             Some(request.password));
 
     let mut user_store = state.user_store.write().await;
-    match user_store.add_user(user) {
+    match user_store.add_user(user).await {
         // TODO: Have common messaging object to generate messages.
         Ok(_) => {
             let response = Json(SignupResponse {

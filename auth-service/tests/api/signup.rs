@@ -1,4 +1,4 @@
-use std::{clone, fmt};
+use std::fmt;
 
 use auth_service::{routes::SignupResponse, ErrorResponse};
 use serde_json::Value;

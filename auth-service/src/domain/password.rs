@@ -17,14 +17,14 @@ const MINIMUM_PASSWORD_LEN: usize = 8;
 
 impl Parseable<String, ValidationError> for Password {
     fn parse(password: String) -> Result<Password, ValidationError> {
-        // Password cannot be longer 
+        // Password cannot be longer
         if &password.len() < &MINIMUM_PASSWORD_LEN {
             Err(ValidationError::new("Invalid password: Must contain at least 8 characters"))
         } else {
             Ok(Password(password))
         }
     }
-    
+
     type Output = Password;
 }
 
@@ -47,7 +47,7 @@ mod tests {
         assert_eq!(password.unwrap().as_ref(), valid_password);
     }
 
-   
+
     #[test_case(
         (0..7).fake::<String>()
     )]

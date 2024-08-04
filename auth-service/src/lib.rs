@@ -31,8 +31,8 @@ impl Application {
             .route("/logout", post(logout))
             .route("/verify-token", post(verify_token))
             .with_state(app_state);
-          
-        
+
+
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
         let server = axum::serve(listener, router);
@@ -51,14 +51,14 @@ impl Application {
 }
 
 
-// TODO: 
+// TODO:
 #[derive(Serialize, Deserialize)]
 pub struct ErrorResponse {
     pub error: String,
 }
 
 impl IntoResponse for AuthAPIError {
-    
+
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
             AuthAPIError::UserAlreadyExists => (StatusCode::CONFLICT, "User already exists"),

@@ -40,7 +40,7 @@ impl TestApp {
         let address = format!("http://{}", app.address.clone());
 
         // Run the auth service in a separate async task
-        // to avoid blocking the main test thread. 
+        // to avoid blocking the main test thread.
         #[allow(clippy::let_underscore_future)]
         let _ = tokio::spawn(app.run());
 
@@ -61,9 +61,9 @@ impl TestApp {
             .expect("Failed to execute request.")
     }
 
-    // TODO: Implement helper functions for all other routes 
+    // TODO: Implement helper functions for all other routes
     // (signup, login, logout, verify-2fa, and verify-token)
-    pub async fn signup<Body>(&self, body: &Body) -> reqwest::Response 
+    pub async fn signup<Body>(&self, body: &Body) -> reqwest::Response
     where Body: serde::Serialize,
     {
         self.http_client
@@ -82,7 +82,7 @@ impl TestApp {
         .await
         .expect("Failed to handle login")
     }
-    
+
     pub async fn logout(&self) -> reqwest::Response {
         self.http_client
         .post(&format!("{}/logout", &self.address))

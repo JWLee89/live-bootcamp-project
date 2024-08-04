@@ -16,16 +16,16 @@ async fn get_test_app() -> TestApp {
 enum SignUpKeys {
     PASSWORD,
     EMAIL,
-    REQUIRES2FA, 
+    REQUIRES2FA,
 }
 
 // TODO: See if we can create a general solution for this problem
-// where the enum is not exactly the same 
+// where the enum is not exactly the same
 impl fmt::Display for SignUpKeys {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let string_repr = match &self {
             SignUpKeys::EMAIL => "email",
-            SignUpKeys::PASSWORD => "password", 
+            SignUpKeys::PASSWORD => "password",
             SignUpKeys::REQUIRES2FA => "requires2FA"
         };
         f.write_str(&string_repr)
@@ -79,14 +79,14 @@ async fn should_return_400_if_invalid_input(invalid_json_payload: Value) {
 )]
 #[tokio::test]
 async fn should_return_409_if_email_already_exists(new_user: Value) {
-    // Call the signup route twice. 
-    // The second request should fail with a 409 HTTP status code    
+    // Call the signup route twice.
+    // The second request should fail with a 409 HTTP status code
     let app = get_test_app().await;
     // Do HTTP Request
     let response = app.signup(&new_user).await;
     // Should work the first time
     assert_eq!(response.status().as_u16(), 201);
-    
+
     let response = app.signup(&new_user).await;
     assert_eq!(
         response
@@ -104,7 +104,7 @@ async fn should_return_409_if_email_already_exists(new_user: Value) {
 async fn should_return_201_if_valid_input(test_case: Value) {
     let app = get_test_app().await;
     println!("test case: {:?}", test_case);
-    
+
     let response = app.signup(&test_case).await;
     assert_eq!(response.status().as_u16(), 201);
 
@@ -140,7 +140,7 @@ async fn should_return_422_if_malformed_input() {
             "email": get_random_email(),
             "requires_teemoA": true
         }),
-        // It might be good to store these inside 
+        // It might be good to store these inside
         // of a reusable enum or struct
         serde_json::json!({
             "email": get_random_email(),

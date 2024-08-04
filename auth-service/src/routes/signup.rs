@@ -9,9 +9,9 @@ pub async fn signup(state: State<AppState>, Json(request): Json<SignupRequest>) 
     let email = Email::parse(request.email).map_err(|_| AuthAPIError::InvalidCredentials)?;
     let password = Password::parse(request.password).map_err(|_| AuthAPIError::InvalidCredentials)?;
 
-    let user = User::new( 
-        email, 
-        request.requires_2fa, 
+    let user = User::new(
+        email,
+        request.requires_2fa,
         password);
 
     let mut user_store = state.user_store.write().await;
@@ -43,4 +43,3 @@ pub struct SignupRequest {
 pub struct SignupResponse {
     pub message: String,
 }
-

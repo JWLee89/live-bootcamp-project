@@ -8,7 +8,6 @@ pub async fn signup(state: State<AppState>, Json(request): Json<SignupRequest>) 
     // Invalid values will raise error
     let email = Email::parse(request.email).map_err(|_| AuthAPIError::InvalidCredentials)?;
     let password = Password::parse(request.password).map_err(|_| AuthAPIError::InvalidCredentials)?;
-
     let user = User::new(
         email,
         request.requires_2fa,

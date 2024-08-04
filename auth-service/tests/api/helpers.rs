@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use auth_service::{app_state::state::{AppState, UserStoreType}, services::hashmap_user_store::HashMapUserStore, Application};
+use auth_service::{app_state::state::AppState, services::hashmap_user_store::HashMapUserStore, Application};
 use tokio::sync::RwLock;
 
 pub struct TestApp {
@@ -75,9 +75,12 @@ impl TestApp {
     }
 
     /// Handle user login
-    pub async fn login(&self) -> reqwest::Response {
+    pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
+    where Body: serde::Serialize,
+    {
         self.http_client
         .post(&format!("{}/login", &self.address))
+        .json(body)
         .send()
         .await
         .expect("Failed to handle login")

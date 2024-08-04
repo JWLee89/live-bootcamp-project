@@ -103,7 +103,6 @@ async fn should_return_409_if_email_already_exists(new_user: Value) {
 #[tokio::test]
 async fn should_return_201_if_valid_input(test_case: Value) {
     let app = get_test_app().await;
-    println!("test case: {:?}", test_case);
 
     let response = app.signup(&test_case).await;
     assert_eq!(response.status().as_u16(), 201);
@@ -130,32 +129,30 @@ fn get_random_email() -> String {
     format!("{}@example.com", Uuid::new_v4())
 }
 
+#[test_case(
+    serde_json::json!({
+        "password": "password123",
+        "email": get_random_email(),
+        "requires_teemoA": true
+    })
+)]
+#[test_case(
+    serde_json::json!({
+        "email": get_random_email(),
+        "password": "captain_teemo",
+    })
+)]
+#[test_case(
+    serde_json::json!({})
+)]
 #[tokio::test]
-async fn should_return_422_if_malformed_input() {
+async fn should_return_422_if_malformed_input(test_case: Value) {
     let app = get_test_app().await;
-
-    let test_cases = [
-        serde_json::json!({
-            "password": "password123",
-            "email": get_random_email(),
-            "requires_teemoA": true
-        }),
-        // It might be good to store these inside
-        // of a reusable enum or struct
-        serde_json::json!({
-            "email": get_random_email(),
-            "password": "captain_teemo",
-        }),
-        serde_json::json!({})
-    ];
-
-    for test_case in test_cases.iter() {
-        let response = app.signup(&test_case).await;
-        assert_eq!(
-            response.status().as_u16(),
-            422,
-            "Failed for input: {:?}",
-            test_case
-        );
-    }
+    let response = app.signup(&test_case).await;
+    assert_eq!(
+        response.status().as_u16(),
+        422,
+        "Failed for input: {:?}",
+        test_case
+    );
 }

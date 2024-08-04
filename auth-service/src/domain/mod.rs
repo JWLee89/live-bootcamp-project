@@ -1,6 +1,6 @@
-pub mod user;
-pub mod error;
-pub mod email;
 pub mod data_stores;
-pub mod password;
+pub mod email;
+pub mod error;
 pub mod parse;
+pub mod password;
+pub mod user;

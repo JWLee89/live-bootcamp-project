@@ -1,4 +1,3 @@
-
 /// Enums for Authentication API-related Errors.
 /// Note: this does not map errors to HTTP status codes.
 ///

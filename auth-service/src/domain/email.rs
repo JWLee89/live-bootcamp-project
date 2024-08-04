@@ -11,10 +11,9 @@ impl AsRef<str> for Email {
     }
 }
 
-
 impl Parseable<String, ValidationError> for Email {
     type Output = Email;
-    fn parse(email: String) -> Result<Email, ValidationError>  {
+    fn parse(email: String) -> Result<Email, ValidationError> {
         if validate_email(&email) {
             Ok(Email(email))
         } else {
@@ -51,5 +50,4 @@ mod test {
             assert_eq!(e, ValidationError::new("invalid email address"));
         }
     }
-
 }

@@ -2,14 +2,13 @@ use std::fmt;
 
 use auth_service::{routes::SignupResponse, ErrorResponse};
 use serde_json::Value;
-use uuid::Uuid;
 use test_case::test_case;
+use uuid::Uuid;
 
 use crate::helpers::TestApp;
 
-
 async fn get_test_app() -> TestApp {
-    return TestApp::new().await
+    return TestApp::new().await;
 }
 
 // TODO: Create a general enum that can do to_string effectively
@@ -26,7 +25,7 @@ impl fmt::Display for SignUpKeys {
         let string_repr = match &self {
             SignUpKeys::EMAIL => "email",
             SignUpKeys::PASSWORD => "password",
-            SignUpKeys::REQUIRES2FA => "requires2FA"
+            SignUpKeys::REQUIRES2FA => "requires2FA",
         };
         f.write_str(&string_repr)
         // Normally, we would do this, but we have
@@ -43,10 +42,7 @@ fn get_test_case(password: &str, email: &str, requires_2fa: bool) -> Value {
     })
 }
 
-
-#[test_case(
-    get_test_case("password123", "Invalid email right here", true)
-)]
+#[test_case(get_test_case("password123", "Invalid email right here", true))]
 #[test_case(
     get_test_case("2short", get_random_email().as_str(), true)
 )]
@@ -59,7 +55,12 @@ async fn should_return_400_if_invalid_input(invalid_json_payload: Value) {
     // The input is considered invalid if:
     // - The email is empty or does not contain '@'
     // - The password is less than 8 characters
-    assert_eq!(response.status().as_u16(), 400, "Failed for input: {:?}", invalid_json_payload);
+    assert_eq!(
+        response.status().as_u16(),
+        400,
+        "Failed for input: {:?}",
+        invalid_json_payload
+    );
 
     assert_eq!(
         response
@@ -98,7 +99,6 @@ async fn should_return_409_if_email_already_exists(new_user: Value) {
     );
 }
 
-
 #[test_case(get_test_case("password123", get_random_email().as_str(), true))]
 #[tokio::test]
 async fn should_return_201_if_valid_input(test_case: Value) {
@@ -111,7 +111,6 @@ async fn should_return_201_if_valid_input(test_case: Value) {
         message: "User created successfully!".to_owned(),
     };
 
-
     // Assert that we are getting the correct response body!
     assert_eq!(
         response
@@ -120,10 +119,7 @@ async fn should_return_201_if_valid_input(test_case: Value) {
             .expect("Could not deserialize response body to UserBody"),
         expected_response
     );
-
-
 }
-
 
 fn get_random_email() -> String {
     format!("{}@example.com", Uuid::new_v4())

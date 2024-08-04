@@ -1,6 +1,5 @@
 use super::{email::Email, password::Password};
 
-
 /// Represents a new user
 #[derive(Debug, PartialEq, Clone)]
 pub struct User {
@@ -22,10 +21,7 @@ impl User {
     /// let requires_two_factor_auth = false;
     /// let user = User::new(email, requires_two_factor_auth, password);
     /// ```
-    pub fn new(
-               email: Email,
-               requires_2fa: bool,
-               password: Password) -> Self {
+    pub fn new(email: Email, requires_2fa: bool, password: Password) -> Self {
         // Note: unwrap here is dangerous. It might be good to return
         User {
             email: email,

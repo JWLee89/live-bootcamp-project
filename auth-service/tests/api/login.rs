@@ -1,14 +1,13 @@
+use serde_json::Value;
 use std::fmt;
 use test_case::test_case;
-use serde_json::Value;
 
 use crate::helpers::TestApp;
-
 
 #[derive(Debug)]
 enum LoginKeys {
     EMAIL,
-    PASSWORD
+    PASSWORD,
 }
 
 impl fmt::Display for LoginKeys {
@@ -25,26 +24,14 @@ fn get_test_case(email: &str, password: &str) -> Value {
     })
 }
 
-#[test_case(
-    get_test_case(
-        "lol@gmail.com",
-        "some random password"
-    )
-)]
+#[test_case(get_test_case("lol@gmail.com", "some random password"))]
 #[tokio::test]
 async fn should_return_422_if_malformed_credentials(body: Value) {
     let app = TestApp::new().await;
     let response = app.post_login(&body).await;
-
-
 }
 
-#[test_case(
-    get_test_case(
-        "lol---gmail.com",
-        "some random password"
-    )
-)]
+#[test_case(get_test_case("lol---gmail.com", "some random password"))]
 #[tokio::test]
 async fn should_return_400_if_invalid_input(body: Value) {
     // Call the log-in route with invalid credentials and assert that a
@@ -54,12 +41,7 @@ async fn should_return_400_if_invalid_input(body: Value) {
     assert_eq!(response.status().as_u16(), 400);
 }
 
-#[test_case(
-    get_test_case(
-        "dont_exist@hotmail.com",
-        "some random password"
-    )
-)]
+#[test_case(get_test_case("dont_exist@hotmail.com", "some random password"))]
 #[tokio::test]
 async fn should_return_401_if_incorrect_credentials(test_case: Value) {
     // Call the log-in route with incorrect credentials and assert

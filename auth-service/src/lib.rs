@@ -1,16 +1,22 @@
 use std::error::Error;
 
-use axum::{http::StatusCode, response::{IntoResponse, Response}, routing::post, serve::Serve, Json, Router};
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::post,
+    serve::Serve,
+    Json, Router,
+};
 
+pub mod app_state;
+pub mod domain;
 pub mod routes;
 pub mod services;
-pub mod domain;
-pub mod app_state;
 
 use app_state::state::AppState;
 use domain::error::AuthAPIError;
 use routes::{login, logout, signup, verify_2fa, verify_token};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use tower_http::services::ServeDir;
 
 // This struct encapsulates our application-related logic.
@@ -32,16 +38,12 @@ impl Application {
             .route("/verify-token", post(verify_token))
             .with_state(app_state);
 
-
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
         let server = axum::serve(listener, router);
 
         // Create a new Application instance and return it
-        Ok(Application {
-            server,
-            address
-        })
+        Ok(Application { server, address })
     }
 
     pub async fn run(self) -> Result<(), std::io::Error> {
@@ -50,7 +52,6 @@ impl Application {
     }
 }
 
-
 // TODO:
 #[derive(Serialize, Deserialize)]
 pub struct ErrorResponse {
@@ -58,13 +59,16 @@ pub struct ErrorResponse {
 }
 
 impl IntoResponse for AuthAPIError {
-
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
             AuthAPIError::UserAlreadyExists => (StatusCode::CONFLICT, "User already exists"),
             AuthAPIError::InvalidCredentials => (StatusCode::BAD_REQUEST, "Invalid credentials"),
-            AuthAPIError::UnexpectedError => (StatusCode::INTERNAL_SERVER_ERROR, "Unexpected error"),
-            AuthAPIError::IncorrectCredentials => (StatusCode::UNAUTHORIZED, "Incorrect credentials"),
+            AuthAPIError::UnexpectedError => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "Unexpected error")
+            }
+            AuthAPIError::IncorrectCredentials => {
+                (StatusCode::UNAUTHORIZED, "Incorrect credentials")
+            }
         };
         let body = Json(ErrorResponse {
             error: error_message.to_string(),

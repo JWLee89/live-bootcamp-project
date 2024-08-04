@@ -2,10 +2,8 @@ use validator::ValidationError;
 
 use super::parse::Parseable;
 
-
 #[derive(Debug, PartialEq, Clone, Hash)]
 pub struct Password(String);
-
 
 impl AsRef<str> for Password {
     fn as_ref(&self) -> &str {
@@ -19,7 +17,9 @@ impl Parseable<String, ValidationError> for Password {
     fn parse(password: String) -> Result<Password, ValidationError> {
         // Password cannot be longer
         if &password.len() < &MINIMUM_PASSWORD_LEN {
-            Err(ValidationError::new("Invalid password: Must contain at least 8 characters"))
+            Err(ValidationError::new(
+                "Invalid password: Must contain at least 8 characters",
+            ))
         } else {
             Ok(Password(password))
         }
@@ -28,12 +28,11 @@ impl Parseable<String, ValidationError> for Password {
     type Output = Password;
 }
 
-
 #[cfg(test)]
 mod tests {
-    use test_case::test_case;
-    use fake::Fake;
     use super::*;
+    use fake::Fake;
+    use test_case::test_case;
 
     #[test_case(
         "I am a long string".to_string()
@@ -47,7 +46,6 @@ mod tests {
         assert_eq!(password.unwrap().as_ref(), valid_password);
     }
 
-
     #[test_case(
         (0..7).fake::<String>()
     )]
@@ -56,6 +54,4 @@ mod tests {
         let password = Password::parse(invalid_password);
         assert_eq!(password.is_err(), true);
     }
-
-
 }

@@ -1,6 +1,5 @@
 use crate::helpers::{HttpStatusCode, TestApp, _assert_eq_response, _assert_eq_status_code};
 
-
 // Tokio's test macro is use to run the test in an async environment
 #[tokio::test]
 async fn root_returns_auth_ui() {

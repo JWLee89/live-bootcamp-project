@@ -1,9 +1,9 @@
 use std::fmt;
 
+use super::helpers::get_random_email;
 use auth_service::{routes::SignupResponse, ErrorResponse};
 use serde_json::Value;
 use test_case::test_case;
-use uuid::Uuid;
 
 use crate::helpers::TestApp;
 
@@ -12,7 +12,7 @@ async fn get_test_app() -> TestApp {
 }
 
 // TODO: Create a general enum that can do to_string effectively
-enum SignUpKeys {
+pub enum SignUpKeys {
     PASSWORD,
     EMAIL,
     REQUIRES2FA,
@@ -119,10 +119,6 @@ async fn should_return_201_if_valid_input(test_case: Value) {
             .expect("Could not deserialize response body to UserBody"),
         expected_response
     );
-}
-
-fn get_random_email() -> String {
-    format!("{}@example.com", Uuid::new_v4())
 }
 
 #[test_case(

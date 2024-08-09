@@ -11,8 +11,9 @@ services:
       auth-service:
         condition: service_started
   auth-service:
-    # TODO: change "letsgetrusty" to your Docker Hub username
     image: ljay189/auth-service
     restart: "always" # automatically restart container when server crashes
+    environment:
+      JWT_SECRET: ${JWT_SECRET} # New!
     ports:
       - "3000:3000" # expose port 3000 so that applications outside the container can connect to it

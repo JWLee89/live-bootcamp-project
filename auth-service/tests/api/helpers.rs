@@ -3,10 +3,13 @@ use std::sync::Arc;
 use auth_service::{
     app_state::state::AppState, services::hashmap_user_store::HashMapUserStore, Application,
 };
+use reqwest::cookie::Jar;
 use tokio::sync::RwLock;
+use uuid::Uuid;
 
 pub struct TestApp {
     pub address: String,
+    pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
 }
 
@@ -22,6 +25,10 @@ pub enum HttpStatusCode {
 /// Check whether a status code is expected value
 pub fn _assert_eq_status_code(response: &reqwest::Response, http_response_code: HttpStatusCode) {
     assert_eq!(response.status().as_u16(), http_response_code as u16);
+}
+
+pub fn get_random_email() -> String {
+    format!("{}@example.com", Uuid::new_v4())
 }
 
 pub fn _assert_eq_response(response: &reqwest::Response, key: &str, expected_value: &str) {
@@ -46,11 +53,16 @@ impl TestApp {
         #[allow(clippy::let_underscore_future)]
         let _ = tokio::spawn(app.run());
 
-        let http_client = reqwest::Client::new(); // Create a Reqwest http client instance
+        let cookie_jar = Arc::new(Jar::default());
+        let http_client = reqwest::Client::builder()
+            .cookie_provider(cookie_jar.clone())
+            .build()
+            .unwrap(); // Create a Reqwest http client instance
 
         // Create new `TestApp` instance and return it
-        TestApp {
+        Self {
             address,
+            cookie_jar,
             http_client,
         }
     }

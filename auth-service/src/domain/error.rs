@@ -7,6 +7,7 @@
 /// InvalidCredentials: Username and / or password is incorrect
 /// UnexpectedError: Any other error that does not already exists
 /// inside of the enum
+#[derive(Debug)]
 pub enum AuthAPIError {
     UserAlreadyExists,
     InvalidCredentials,

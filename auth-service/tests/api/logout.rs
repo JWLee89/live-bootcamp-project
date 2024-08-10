@@ -5,7 +5,7 @@ use reqwest::Url;
 use serde_json::Value;
 use test_case::test_case;
 
-use crate::helpers::{get_random_email, TestApp};
+use crate::helpers::{get_random_email, HttpStatusCode, TestApp, _assert_eq_status_code};
 use crate::signup::get_test_case;
 
 fn create_logout_payload(jwt: &str) -> Value {
@@ -13,16 +13,14 @@ fn create_logout_payload(jwt: &str) -> Value {
         "jwt": jwt
     })
 }
-// #[test_case(serde_json::json!({"invalid key": "invalid value"}))]
-// #[test_case(serde_json::json!({}))]
+
 #[tokio::test]
 async fn should_return_400_if_jwt_cookie_missing() {
     let app = TestApp::new().await;
     let response = app.logout().await;
-    assert_eq!(response.status().as_u16(), 400);
+    _assert_eq_status_code(&response, HttpStatusCode::BadRequest);
 }
 
-// #[test_case(create_logout_payload("invalid_jwt"))]
 #[tokio::test]
 async fn should_return_401_if_invalid_token() {
     let app = TestApp::new().await;
@@ -37,7 +35,7 @@ async fn should_return_401_if_invalid_token() {
     );
 
     let response = app.logout().await;
-    assert_eq!(response.status().as_u16(), 401);
+    _assert_eq_status_code(&response, HttpStatusCode::Unauthorized);
 }
 
 #[test_case("captain teemo password", get_random_email(), true)]
@@ -52,18 +50,18 @@ async fn test_logout_once(app: &TestApp, password: &str, email: &str, enable_2fa
     let response = app
         .signup(&get_test_case(password, &email, enable_2fa))
         .await;
-    assert_eq!(response.status().as_u16(), 201);
+    _assert_eq_status_code(&response, HttpStatusCode::Created);
 
     // Do login
     let login_payload = serde_json::json!({
         "password": &password,
         "email": &email
     });
-    let response = app.post_login(&login_payload).await;
+    let response = app.login(&login_payload).await;
     // TODO: Maybe change all the http status code from into to enum integers
     // 200 is quite easy, but some of the more obscure ones might be difficult
     // for people who are not web developers
-    assert_eq!(response.status().as_u16(), 200);
+    _assert_eq_status_code(&response, HttpStatusCode::OK);
     // TODO: duplicate code: add to helper
     let auth_cookie = response
         .cookies()
@@ -73,7 +71,7 @@ async fn test_logout_once(app: &TestApp, password: &str, email: &str, enable_2fa
 
     // Logout
     let response = app.logout().await;
-    assert_eq!(response.status().as_u16(), 200);
+    _assert_eq_status_code(&response, HttpStatusCode::OK);
 }
 
 #[test_case("captain teemo password", get_random_email(), true)]
@@ -87,5 +85,5 @@ async fn should_return_400_if_logout_called_twice_in_a_row(
     test_logout_once(&app, &password, &email, enable_2fa).await;
     // This should fail since we logged out already
     let response = app.logout().await;
-    assert_eq!(response.status().as_u16(), 400);
+    _assert_eq_status_code(&response, HttpStatusCode::BadRequest);
 }

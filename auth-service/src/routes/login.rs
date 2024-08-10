@@ -39,14 +39,18 @@ pub async fn login(
         Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
     };
 
+    let user = match user_store.get_user(&email).await {
+        Ok(user) => user,
+        Err(_) => return (jar, Err(AuthAPIError::IncorrectCredentials)),
+    };
+
     // update cookie
-    let auth_cookie = generate_auth_cookie(&email).unwrap();
+    let auth_cookie = match generate_auth_cookie(&user.email) {
+        Ok(cookie) => cookie,
+        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
+    };
+
     let updated_jar = jar.add(auth_cookie);
-
-    // Okay, it is now safe to perform login
-    // TODO: Probably need to do something with the user
-    // let user: User = User::new(email, false, password);
-
     (updated_jar, Ok(StatusCode::OK.into_response()))
 }
 

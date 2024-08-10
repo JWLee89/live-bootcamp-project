@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::fmt;
 use test_case::test_case;
 
-use crate::helpers::TestApp;
+use crate::helpers::{HttpStatusCode, TestApp, _assert_eq_status_code};
 
 #[derive(Debug)]
 enum LoginKeys {
@@ -39,7 +39,7 @@ fn get_test_case(email: &str, password: &str) -> Value {
 #[tokio::test]
 async fn should_return_422_if_malformed_credentials(body: Value) {
     let app = TestApp::new().await;
-    let response = app.post_login(&body).await;
+    let response = app.login(&body).await;
     assert_eq!(response.status().as_u16(), 422);
 }
 
@@ -50,8 +50,8 @@ async fn should_return_400_if_invalid_input(body: Value) {
     // Call the log-in route with invalid credentials and assert that a
     // 400 HTTP status code is returned along with the appropriate error message.
     let app = TestApp::new().await;
-    let response = app.post_login(&body).await;
-    assert_eq!(response.status().as_u16(), 400);
+    let response = app.login(&body).await;
+    _assert_eq_status_code(&response, HttpStatusCode::BadRequest);
 }
 
 #[test_case(get_test_case("dont_exist@hotmail.com", "some random password"))]
@@ -60,8 +60,8 @@ async fn should_return_401_if_incorrect_credentials(test_case: Value) {
     // Call the log-in route with incorrect credentials and assert
     // that a 401 HTTP status code is returned along with the appropriate error message.
     let app = TestApp::new().await;
-    let response = app.post_login(&test_case).await;
-    assert_eq!(response.status().as_u16(), 401);
+    let response = app.login(&test_case).await;
+    _assert_eq_status_code(&response, HttpStatusCode::Unauthorized);
 }
 
 #[tokio::test]
@@ -78,16 +78,16 @@ async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
 
     let response = app.signup(&signup_body).await;
 
-    assert_eq!(response.status().as_u16(), 201);
+    _assert_eq_status_code(&response, HttpStatusCode::Created);
 
     let login_body = serde_json::json!({
         "email": random_email,
         "password": "password123",
     });
 
-    let response = app.post_login(&login_body).await;
+    let response = app.login(&login_body).await;
 
-    assert_eq!(response.status().as_u16(), 200);
+    _assert_eq_status_code(&response, HttpStatusCode::OK);
 
     let auth_cookie = response
         .cookies()

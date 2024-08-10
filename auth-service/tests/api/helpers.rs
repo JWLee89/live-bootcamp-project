@@ -21,6 +21,10 @@ pub struct TestApp {
 pub enum HttpStatusCode {
     #[default]
     OK = 200,
+    Created = 201,
+    BadRequest = 400,
+    Unauthorized = 401,
+    MalformedInput = 422,
 }
 
 /// Check whether a status code is expected value
@@ -91,7 +95,7 @@ impl TestApp {
     }
 
     /// Handle user login
-    pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
+    pub async fn login<Body>(&self, body: &Body) -> reqwest::Response
     where
         Body: serde::Serialize,
     {
@@ -111,19 +115,27 @@ impl TestApp {
             .expect("Failed to handle logout")
     }
 
-    pub async fn verify_2fa(&self) -> reqwest::Response {
+    pub async fn verify_2fa<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
         self.http_client
             .post(&format!("{}/verify-2fa", &self.address))
+            .json(body)
             .send()
             .await
             .expect("Failed to verify two factor authentication")
     }
 
-    pub async fn verify_token(&self) -> reqwest::Response {
+    pub async fn verify_token<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
         self.http_client
-            .post(&format!("{}/verify-token", &self.address))
+            .post(format!("{}/verify-token", &self.address))
+            .json(body)
             .send()
             .await
-            .expect("Failed to verify token")
+            .expect("Failed to execute request.")
     }
 }

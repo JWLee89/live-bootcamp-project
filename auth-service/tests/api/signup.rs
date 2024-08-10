@@ -34,7 +34,7 @@ impl fmt::Display for SignUpKeys {
     }
 }
 
-fn get_test_case(password: &str, email: &str, requires_2fa: bool) -> Value {
+pub fn get_test_case(password: &str, email: &str, requires_2fa: bool) -> Value {
     serde_json::json!({
         format!("{}", SignUpKeys::PASSWORD) : password,
         format!("{}", SignUpKeys::EMAIL): email,

@@ -21,7 +21,7 @@ pub async fn login(
     let password =
         match Password::parse(request.password).map_err(|_| AuthAPIError::InvalidCredentials) {
             Ok(password) => password,
-            Err(err) => return (jar, Err(AuthAPIError::InvalidCredentials)),
+            Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
         };
 
     // Validation
@@ -44,7 +44,8 @@ pub async fn login(
     let updated_jar = jar.add(auth_cookie);
 
     // Okay, it is now safe to perform login
-    let user: User = User::new(email, false, password);
+    // TODO: Probably need to do something with the user
+    // let user: User = User::new(email, false, password);
 
     (updated_jar, Ok(StatusCode::OK.into_response()))
 }

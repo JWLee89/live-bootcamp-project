@@ -1,5 +1,5 @@
 use super::{helpers::get_random_email, signup::SignUpKeys};
-use auth_service::{utils::constants::JWT_COOKIE_NAME, ErrorResponse};
+use auth_service::utils::constants::JWT_COOKIE_NAME;
 use serde_json::Value;
 use std::fmt;
 use test_case::test_case;

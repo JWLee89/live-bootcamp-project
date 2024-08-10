@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use auth_service::{
-    app_state::state::AppState, services::hashmap_user_store::HashMapUserStore, Application,
+    app_state::state::AppState, services::hashmap_user_store::HashMapUserStore,
+    utils::constants::prod, Application,
 };
 use tokio::sync::RwLock;
 
@@ -11,7 +12,7 @@ async fn main() {
 
     let app_state: AppState = AppState::new(store);
 
-    let app = Application::build(app_state, "0.0.0.0:3000")
+    let app = Application::build(app_state, prod::APP_ADDRESS)
         .await
         .expect("Failed to build app");
 

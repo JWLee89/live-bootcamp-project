@@ -67,11 +67,16 @@ async fn test_logout_once(app: &TestApp, password: &str, email: &str, enable_2fa
         .cookies()
         .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
         .expect("Authentication cookie not found");
-    assert!(!auth_cookie.value().is_empty());
+    let token = auth_cookie.value();
+    assert!(!token.is_empty());
 
     // Logout
     let response = app.logout().await;
     _assert_eq_status_code(&response, HttpStatusCode::OK);
+
+    // Check whether token was added to banned token store
+    let banned_token_store = app.banned_token_store.read().await;
+    assert!(banned_token_store.token_exists(token));
 }
 
 #[test_case("captain teemo password", get_random_email(), true)]

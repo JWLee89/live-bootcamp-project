@@ -13,7 +13,8 @@ pub async fn verify_token(
     Json(request): Json<VerifyTokenRequest>,
 ) -> impl IntoResponse {
     let token = request.token.as_str();
-    match validate_token(&token).await {
+    let banned_token_store = state.banned_token_store;
+    match validate_token(&token, banned_token_store).await {
         Ok(_) => Ok(StatusCode::OK.into_response()),
         Err(_) => return Err(AuthAPIError::InvalidToken),
     }

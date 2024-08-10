@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
 use auth_service::{
-    app_state::state::AppState, services::hashmap_user_store::HashMapUserStore,
-    utils::constants::test, Application,
+    app_state::state::{AppState, BannedTokenStoreType},
+    domain::data_stores::{BannedTokenStore, HashsetBannedTokenStore},
+    services::hashmap_user_store::HashMapUserStore,
+    utils::constants::test,
+    Application,
 };
 use reqwest::cookie::Jar;
 use tokio::sync::RwLock;
@@ -12,6 +15,7 @@ pub struct TestApp {
     pub address: String,
     pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
+    pub banned_token_store: BannedTokenStoreType,
 }
 
 // TODO: See whether rust provides common enum
@@ -46,7 +50,8 @@ impl TestApp {
     pub async fn new() -> Self {
         let store: Arc<RwLock<HashMapUserStore>> =
             Arc::new(RwLock::new(HashMapUserStore::default()));
-        let app_state: AppState = AppState::new(store);
+        let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::new()));
+        let app_state: AppState = AppState::new(store, banned_token_store.clone());
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await
             .expect("Failed to build app");
@@ -69,6 +74,7 @@ impl TestApp {
             address,
             cookie_jar,
             http_client,
+            banned_token_store,
         }
     }
 

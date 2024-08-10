@@ -61,3 +61,47 @@ async fn should_return_401_if_invalid_token(invalid_token_payload: Value) {
     let response = app.verify_token(&invalid_token_payload).await;
     _assert_eq_status_code(&response, HttpStatusCode::Unauthorized);
 }
+
+#[tokio::test]
+async fn should_return_401_if_banned_token() {
+    // TODO: refactor
+    let app = TestApp::new().await;
+    let random_email = get_random_email();
+
+    let signup_body = serde_json::json!({
+        "email": random_email,
+        "password": "password123",
+        "requires2FA": false
+    });
+
+    let response = app.signup(&signup_body).await;
+
+    _assert_eq_status_code(&response, HttpStatusCode::Created);
+
+    let login_body = serde_json::json!({
+        "email": random_email,
+        "password": "password123",
+    });
+
+    let response = app.login(&login_body).await;
+
+    _assert_eq_status_code(&response, HttpStatusCode::OK);
+
+    let auth_cookie = response
+        .cookies()
+        .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
+        .expect("No auth cookie found");
+
+    // ban current token
+    app.banned_token_store
+        .write()
+        .await
+        .insert(auth_cookie.value().to_string());
+
+    let verify_token_body = serde_json::json!({
+        "token": auth_cookie.value(),
+    });
+    let response = app.verify_token(&verify_token_body).await;
+    // Should not work because token is banned
+    _assert_eq_status_code(&response, HttpStatusCode::Unauthorized);
+}

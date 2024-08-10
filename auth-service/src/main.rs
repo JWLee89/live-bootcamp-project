@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
 use auth_service::{
-    app_state::state::AppState, services::hashmap_user_store::HashMapUserStore,
-    utils::constants::prod, Application,
+    app_state::state::AppState, domain::data_stores::HashsetBannedTokenStore,
+    services::hashmap_user_store::HashMapUserStore, utils::constants::prod, Application,
 };
 use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() {
     let store: Arc<RwLock<HashMapUserStore>> = Arc::new(RwLock::new(HashMapUserStore::default()));
-
-    let app_state: AppState = AppState::new(store);
+    let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::new()));
+    let app_state: AppState = AppState::new(store, banned_token_store);
 
     let app = Application::build(app_state, prod::APP_ADDRESS)
         .await

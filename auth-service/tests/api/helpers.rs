@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use auth_service::{
     app_state::state::{AppState, BannedTokenStoreType},
-    domain::data_stores::{BannedTokenStore, HashsetBannedTokenStore},
+    domain::data_stores::HashsetBannedTokenStore,
     services::hashmap_user_store::HashMapUserStore,
     utils::constants::test,
     Application,

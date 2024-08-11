@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::{
     app_state::state::AppState,
-    domain::{email::Email, error::AuthAPIError, parse::Parseable, password::Password, user::User},
+    domain::{email::Email, error::AuthAPIError, parse::Parseable, password::Password},
     utils::auth::generate_auth_cookie,
 };
 
@@ -12,46 +12,38 @@ pub async fn login(
     State(state): State<AppState>,
     jar: CookieJar,
     Json(request): Json<LoginRequest>,
-) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>) {
+) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
     // TODO: fix. Should be doing validation / error handling here
-    let email = match Email::parse(request.email).map_err(|_| AuthAPIError::InvalidCredentials) {
-        Ok(email) => email,
-        Err(err) => return (jar, Err(err)),
-    };
+    let email = Email::parse(request.email).map_err(|_| AuthAPIError::InvalidCredentials)?;
     let password =
-        match Password::parse(request.password).map_err(|_| AuthAPIError::InvalidCredentials) {
-            Ok(password) => password,
-            Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
-        };
+        Password::parse(request.password).map_err(|_| AuthAPIError::InvalidCredentials)?;
 
     // Validation
     let user_store = &state.user_store.read().await;
 
     // raised if user does not exist
-    match user_store.get_user(&email).await {
-        Ok(_) => {}
-        Err(_) => return (jar, Err(AuthAPIError::IncorrectCredentials)),
-    };
+    user_store
+        .get_user(&email)
+        .await
+        .map_err(|_| AuthAPIError::IncorrectCredentials)?;
 
     // Raised if username and password info does not match
-    match user_store.validate_user(&email, &password).await {
-        Ok(_) => {}
-        Err(_) => return (jar, Err(AuthAPIError::InvalidCredentials)),
-    };
+    user_store
+        .validate_user(&email, &password)
+        .await
+        .map_err(|_| AuthAPIError::InvalidCredentials)?;
 
-    let user = match user_store.get_user(&email).await {
-        Ok(user) => user,
-        Err(_) => return (jar, Err(AuthAPIError::IncorrectCredentials)),
-    };
+    let user = user_store
+        .get_user(&email)
+        .await
+        .map_err(|_| AuthAPIError::IncorrectCredentials)?;
 
     // update cookie
-    let auth_cookie = match generate_auth_cookie(&user.email) {
-        Ok(cookie) => cookie,
-        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
-    };
+    let auth_cookie =
+        generate_auth_cookie(&user.email).map_err(|_| AuthAPIError::UnexpectedError)?;
 
     let updated_jar = jar.add(auth_cookie);
-    (updated_jar, Ok(StatusCode::OK.into_response()))
+    Ok((updated_jar, StatusCode::OK.into_response()))
 }
 
 #[derive(Deserialize)]

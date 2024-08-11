@@ -1,3 +1,4 @@
+use jsonwebtoken::Validation;
 use validator::{validate_email, ValidationError};
 
 use super::parse::Parseable;

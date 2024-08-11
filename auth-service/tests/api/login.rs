@@ -40,7 +40,7 @@ fn get_test_case(email: &str, password: &str) -> Value {
 async fn should_return_422_if_malformed_credentials(body: Value) {
     let app = TestApp::new().await;
     let response = app.login(&body).await;
-    assert_eq!(response.status().as_u16(), 422);
+    _assert_eq_status_code(&response, HttpStatusCode::MalformedInput);
 }
 
 #[test_case(get_test_case("", ""))]

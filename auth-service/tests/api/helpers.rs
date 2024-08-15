@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use auth_service::{
-    app_state::state::{AppState, BannedTokenStoreType, TwoFACodeStoreType},
+    app_state::state::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType},
     domain::{
         data_stores::HashsetBannedTokenStore, hashmap_two_fa_code_store::HashMapTwoFACodeStore,
     },
-    services::hashmap_user_store::HashMapUserStore,
+    services::{hashmap_user_store::HashMapUserStore, mock_email_client::MockEmailClient},
     utils::constants::test,
     Application,
 };
@@ -19,6 +19,7 @@ pub struct TestApp {
     pub http_client: reqwest::Client,
     pub banned_token_store: BannedTokenStoreType,
     pub two_fa_code_store: TwoFACodeStoreType,
+    pub email_client: EmailClientType,
 }
 
 /// Check whether a status code is expected value
@@ -38,13 +39,19 @@ pub fn _assert_eq_response(response: &reqwest::Response, key: &str, expected_val
 
 impl TestApp {
     pub async fn new() -> Self {
+        // TODO: Abstract this out
         let store: Arc<RwLock<HashMapUserStore>> =
             Arc::new(RwLock::new(HashMapUserStore::default()));
         let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::new()));
         let two_fa_code_store: Arc<RwLock<HashMapTwoFACodeStore>> =
             Arc::new(RwLock::new(HashMapTwoFACodeStore::default()));
-        let app_state: AppState =
-            AppState::new(store, banned_token_store.clone(), two_fa_code_store.clone());
+        let email_client = Arc::new(RwLock::new(MockEmailClient::default()));
+        let app_state: AppState = AppState::new(
+            store,
+            banned_token_store.clone(),
+            two_fa_code_store.clone(),
+            email_client.clone(),
+        );
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await
             .expect("Failed to build app");
@@ -69,6 +76,7 @@ impl TestApp {
             http_client,
             banned_token_store,
             two_fa_code_store,
+            email_client,
         }
     }
 

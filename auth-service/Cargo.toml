@@ -6,8 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# CORS
-validator = "0.16.1" # For validating email and password
+# Random number generator
+rand = "0.8.5"
+# For validating email and password
+validator = "0.16.1"
 async-trait = "0.1.78"
 axum = "0.7.4"
 tokio = { version = "1.36", features = ["full"] }
@@ -26,6 +28,8 @@ lazy_static = "1.4.0"
 # Used only during development such as
 # running tests, building documentation, etc.
 [dev-dependencies]
+# For docstring testing of async functions
+tokio-test = "0.4.4"
 fake = "=2.3.0"
 quickcheck = "0.9.2"
 quickcheck_macros = "0.9.1"

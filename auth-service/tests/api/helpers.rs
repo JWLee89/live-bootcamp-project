@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
 use auth_service::{
-    app_state::state::{AppState, BannedTokenStoreType},
-    domain::data_stores::HashsetBannedTokenStore,
+    app_state::state::{AppState, BannedTokenStoreType, TwoFACodeStoreType},
+    domain::{
+        data_stores::HashsetBannedTokenStore, hashmap_two_fa_code_store::HashMapTwoFACodeStore,
+    },
     services::hashmap_user_store::HashMapUserStore,
     utils::constants::test,
     Application,
 };
-use reqwest::cookie::Jar;
+use reqwest::{cookie::Jar, StatusCode};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
@@ -16,24 +18,12 @@ pub struct TestApp {
     pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
     pub banned_token_store: BannedTokenStoreType,
-}
-
-// TODO: See whether rust provides common enum
-// for HTTP status codes
-#[repr(u16)]
-#[derive(PartialEq, Debug, Default, Eq, Hash, Clone)]
-pub enum HttpStatusCode {
-    #[default]
-    OK = 200,
-    Created = 201,
-    BadRequest = 400,
-    Unauthorized = 401,
-    MalformedInput = 422,
+    pub two_fa_code_store: TwoFACodeStoreType,
 }
 
 /// Check whether a status code is expected value
-pub fn _assert_eq_status_code(response: &reqwest::Response, http_response_code: HttpStatusCode) {
-    assert_eq!(response.status().as_u16(), http_response_code as u16);
+pub fn _assert_eq_status_code(response: &reqwest::Response, http_response_code: StatusCode) {
+    assert_eq!(response.status().as_u16(), http_response_code.as_u16());
 }
 
 pub fn get_random_email() -> String {
@@ -51,7 +41,10 @@ impl TestApp {
         let store: Arc<RwLock<HashMapUserStore>> =
             Arc::new(RwLock::new(HashMapUserStore::default()));
         let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::new()));
-        let app_state: AppState = AppState::new(store, banned_token_store.clone());
+        let two_fa_code_store: Arc<RwLock<HashMapTwoFACodeStore>> =
+            Arc::new(RwLock::new(HashMapTwoFACodeStore::default()));
+        let app_state: AppState =
+            AppState::new(store, banned_token_store.clone(), two_fa_code_store.clone());
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await
             .expect("Failed to build app");
@@ -75,6 +68,7 @@ impl TestApp {
             cookie_jar,
             http_client,
             banned_token_store,
+            two_fa_code_store,
         }
     }
 

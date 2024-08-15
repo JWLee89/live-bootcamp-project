@@ -1,10 +1,15 @@
 use super::{helpers::get_random_email, signup::SignUpKeys};
-use auth_service::utils::constants::JWT_COOKIE_NAME;
+use auth_service::{
+    domain::{email::Email, parse::Parseable},
+    routes::TwoFactorAuthResponse,
+    utils::constants::JWT_COOKIE_NAME,
+};
+use reqwest::StatusCode;
 use serde_json::Value;
 use std::fmt;
 use test_case::test_case;
 
-use crate::helpers::{HttpStatusCode, TestApp, _assert_eq_status_code};
+use crate::helpers::{TestApp, _assert_eq_status_code};
 
 #[derive(Debug)]
 enum LoginKeys {
@@ -40,7 +45,7 @@ fn get_test_case(email: &str, password: &str) -> Value {
 async fn should_return_422_if_malformed_credentials(body: Value) {
     let app = TestApp::new().await;
     let response = app.login(&body).await;
-    _assert_eq_status_code(&response, HttpStatusCode::MalformedInput);
+    _assert_eq_status_code(&response, StatusCode::UNPROCESSABLE_ENTITY);
 }
 
 #[test_case(get_test_case("", ""))]
@@ -51,7 +56,7 @@ async fn should_return_400_if_invalid_input(body: Value) {
     // 400 HTTP status code is returned along with the appropriate error message.
     let app = TestApp::new().await;
     let response = app.login(&body).await;
-    _assert_eq_status_code(&response, HttpStatusCode::BadRequest);
+    _assert_eq_status_code(&response, StatusCode::BAD_REQUEST);
 }
 
 #[test_case(get_test_case("dont_exist@hotmail.com", "some random password"))]
@@ -61,33 +66,40 @@ async fn should_return_401_if_incorrect_credentials(test_case: Value) {
     // that a 401 HTTP status code is returned along with the appropriate error message.
     let app = TestApp::new().await;
     let response = app.login(&test_case).await;
-    _assert_eq_status_code(&response, HttpStatusCode::Unauthorized);
+    _assert_eq_status_code(&response, StatusCode::UNAUTHORIZED);
 }
 
-#[tokio::test]
-async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
-    let app = TestApp::new().await;
+async fn prepare_login(requires_2fa: bool) -> (TestApp, Value) {
+    let app: TestApp = TestApp::new().await;
 
     let random_email = get_random_email();
-
+    let email_str = "password123";
     let signup_body = serde_json::json!({
         "email": random_email,
-        "password": "password123",
-        "requires2FA": false
+        "password": email_str,
+        "requires2FA": requires_2fa
     });
 
     let response = app.signup(&signup_body).await;
 
-    _assert_eq_status_code(&response, HttpStatusCode::Created);
+    _assert_eq_status_code(&response, StatusCode::CREATED);
 
-    let login_body = serde_json::json!({
-        "email": random_email,
-        "password": "password123",
-    });
+    (
+        app,
+        serde_json::json!({
+            "email": random_email,
+            "password": email_str,
+        }),
+    )
+}
 
-    let response = app.login(&login_body).await;
+#[tokio::test]
+async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
+    let enable_efa = false;
+    let (app, login_body) = prepare_login(enable_efa).await;
+    let response: reqwest::Response = app.login(&login_body).await;
 
-    _assert_eq_status_code(&response, HttpStatusCode::OK);
+    _assert_eq_status_code(&response, StatusCode::OK);
 
     let auth_cookie = response
         .cookies()
@@ -95,4 +107,42 @@ async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
         .expect("No auth cookie found");
 
     assert!(!auth_cookie.value().is_empty());
+}
+
+#[tokio::test]
+async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
+    let enable_2fa = true;
+    let (app, login_body) = prepare_login(enable_2fa).await;
+    let response = app.login(&login_body).await;
+    _assert_eq_status_code(&response, StatusCode::PARTIAL_CONTENT);
+
+    let json_body = response
+        .json::<TwoFactorAuthResponse>()
+        .await
+        .expect("Could not deserialize response body to TwoFactorAuthResponse");
+
+    assert_eq!(json_body.message, "2FA required".to_owned());
+
+    // TODO: assert that `json_body.login_attempt_id` is stored inside `app.two_fa_code_store`
+    let two_fa_store = app.two_fa_code_store.read().await;
+
+    let mut email_string = login_body
+        .as_object()
+        .unwrap()
+        .get("email")
+        .unwrap()
+        .to_string();
+    // Remove " character from start and end of string. Otherwise, we get an error
+    email_string.pop();
+    email_string.remove(0);
+
+    let email = Email::parse(email_string).unwrap();
+    let get_code_result = two_fa_store.get_code(&email).await;
+    if let Err(e) = get_code_result {
+        let error_msg = format!(
+            "LoginAttempId should be added to two factor code store: {:?}",
+            e
+        );
+        panic!("{}", error_msg);
+    }
 }

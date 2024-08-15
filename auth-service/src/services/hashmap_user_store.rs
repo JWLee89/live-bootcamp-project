@@ -73,8 +73,9 @@ mod tests {
         store
     }
 
-    #[test_case("test_email".to_owned(), false)]
+    #[test_case("test_email@google.com".to_owned(), false)]
     #[test_case("teemo@gmail.com".to_owned(), true)]
+    #[tokio::test]
     async fn test_add_user(email: String, requires_2fa: bool) {
         // TODO add username
         let user = User::new(
@@ -101,6 +102,7 @@ mod tests {
     #[test_case(
         Email::parse("email@hotmail.com".to_string()).unwrap()
     )]
+    #[tokio::test]
     async fn test_get_user(email: Email) {
         let user = User::new(
             email.clone(),
@@ -131,6 +133,7 @@ mod tests {
         Email::parse("email@hotmail.com".to_string()).unwrap(),
         Password::parse("valid password".to_owned()).unwrap()
     )]
+    #[tokio::test]
     async fn test_validate_user(email: Email, password: Password) {
         let user = User::new(email.clone(), false, password);
         let mut user_store = empty_hashmap_user_store();

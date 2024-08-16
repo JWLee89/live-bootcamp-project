@@ -69,7 +69,7 @@ async fn should_return_401_if_incorrect_credentials(test_case: Value) {
     _assert_eq_status_code(&response, StatusCode::UNAUTHORIZED);
 }
 
-async fn prepare_login(requires_2fa: bool) -> (TestApp, Value) {
+pub async fn prepare_login(requires_2fa: bool) -> (TestApp, Value) {
     let app: TestApp = TestApp::new().await;
 
     let random_email = get_random_email();

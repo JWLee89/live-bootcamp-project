@@ -14,6 +14,24 @@ services:
     image: ljay189/auth-service
     restart: "always" # automatically restart container when server crashes
     environment:
-      JWT_SECRET: ${JWT_SECRET} # New!
+      JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:5432
+    depends_on:
+      - db
     ports:
       - "3000:3000" # expose port 3000 so that applications outside the container can connect to it
+  db:
+    image: postgres:15.2-alpine
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+    - "5432:5432"
+    command: -p 5432 # Startup postgresql on port 5433
+    volumes:
+      - db:/var/lib/postgresql/data
+
+# For setting up postgresql database
+volumes:
+  db:
+    driver: local

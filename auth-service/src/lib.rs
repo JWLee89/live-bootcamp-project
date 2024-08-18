@@ -18,6 +18,7 @@ use app_state::state::AppState;
 use domain::error::AuthAPIError;
 use routes::{login, logout, signup, verify_2fa, verify_token};
 use serde::{Deserialize, Serialize};
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 // This struct encapsulates our application-related logic.
 pub struct Application {
@@ -68,6 +69,11 @@ impl Application {
         println!("listening on {}", &self.address);
         self.server.await
     }
+}
+
+/// Create a new PostgreSQL connection pool
+pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
+    PgPoolOptions::new().max_connections(5).connect(url).await
 }
 
 // TODO:

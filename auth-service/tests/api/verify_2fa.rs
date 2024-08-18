@@ -78,8 +78,8 @@ async fn should_return_200_if_correct_code() {
     "2FACode": "invalidcode",
 }))]
 #[test_case(serde_json::json!({
-    "email": "bob@gmail.com",
-    "loginAttemptId": "wrong_format",
+    "email": "another_email@hotmal.com",
+    "loginAttemptId": LoginAttemptId::default().as_ref(),
     "2FACode": "123452",
 }))]
 #[tokio::test]

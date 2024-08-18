@@ -31,7 +31,7 @@ pub async fn verify_2fa(
     // TODO: Can we reduce duplicate: |_| AuthAPIError::InvalidCredentials
     let email = Email::parse(request.email).map_err(|_| AuthAPIError::InvalidCredentials)?;
     let login_attempt_id = LoginAttemptId::parse(request.login_attempt_id)
-        .map_err(|_| AuthAPIError::IncorrectCredentials)?;
+        .map_err(|_| AuthAPIError::InvalidCredentials)?;
     let two_fa_code =
         TwoFACode::parse(request.two_fa_code).map_err(|_| AuthAPIError::IncorrectCredentials)?;
 

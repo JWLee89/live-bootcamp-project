@@ -35,7 +35,7 @@ impl UserStore for PostgresUserStore {
                 Ok(password) => password,
                 Err(_) => return Err(UserStoreError::UnexpectedError),
             };
-
+        // TODO: See if there is a better way to do this!
         let result = sqlx::query(
             r#"
             insert into USERS
@@ -107,12 +107,14 @@ impl UserStore for PostgresUserStore {
 async fn verify_password_hash(
     expected_password_hash: String,
     password_candidate: String,
-) -> Result<(), Box<dyn Error>> {
-    let task_result = tokio::task::spawn_blocking(move || {
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+    tokio::task::spawn_blocking(move || {
         let expected_password_hash: PasswordHash<'_> = PasswordHash::new(&expected_password_hash)?;
-        Argon2::default().verify_password(password_candidate.as_bytes(), &expected_password_hash)
-    });
-    task_result.await?.map_err(|e| e.into())
+        let result = Argon2::default()
+            .verify_password(password_candidate.as_bytes(), &expected_password_hash);
+        result.map_err(|err| Box::new(err) as Box<dyn Error + Send + Sync>)
+    })
+    .await?
 }
 
 // Helper function to hash passwords before persisting them in the database.
@@ -132,6 +134,5 @@ async fn compute_password_hash(password: String) -> Result<String, Box<dyn Error
         .to_string();
         Ok(password_hash)
     });
-
     compute_password_hash_task.await?
 }

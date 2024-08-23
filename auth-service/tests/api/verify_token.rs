@@ -11,14 +11,15 @@ use test_case::test_case;
 }))]
 #[tokio::test]
 async fn should_return_422_if_malformed_input(invalid_payload: Value) {
-    let test_app = TestApp::new().await;
-    let response = test_app.verify_token(&invalid_payload).await;
+    let mut app = TestApp::new().await;
+    let response = app.verify_token(&invalid_payload).await;
     _assert_eq_status_code(&response, StatusCode::UNPROCESSABLE_ENTITY);
+    app.clean_up().await;
 }
 
 #[tokio::test]
 async fn should_return_200_valid_token() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let random_email = get_random_email();
 
     let signup_body = serde_json::json!({
@@ -51,6 +52,7 @@ async fn should_return_200_valid_token() {
     });
     let response = app.verify_token(&verify_token_body).await;
     _assert_eq_status_code(&response, StatusCode::OK);
+    app.clean_up().await;
 }
 
 #[test_case(serde_json::json!({
@@ -58,15 +60,16 @@ async fn should_return_200_valid_token() {
 }))]
 #[tokio::test]
 async fn should_return_401_if_invalid_token(invalid_token_payload: Value) {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let response = app.verify_token(&invalid_token_payload).await;
     _assert_eq_status_code(&response, StatusCode::UNAUTHORIZED);
+    app.clean_up().await;
 }
 
 #[tokio::test]
 async fn should_return_401_if_banned_token() {
     // TODO: refactor
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let random_email = get_random_email();
 
     let signup_body = serde_json::json!({
@@ -109,4 +112,5 @@ async fn should_return_401_if_banned_token() {
     let response = app.verify_token(&verify_token_body).await;
     // Should not work because token is banned
     _assert_eq_status_code(&response, StatusCode::UNAUTHORIZED);
+    app.clean_up().await;
 }

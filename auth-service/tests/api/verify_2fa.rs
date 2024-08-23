@@ -24,9 +24,10 @@ use test_case::test_case;
 }))]
 #[tokio::test]
 async fn should_return_422_if_malformed_input(malformed_body: Value) {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let response = app.verify_2fa(&malformed_body).await;
     _assert_eq_status_code(&response, StatusCode::UNPROCESSABLE_ENTITY);
+    app.clean_up().await;
 }
 
 async fn prepare_200_case() -> (TestApp, Value, Value) {
@@ -66,10 +67,11 @@ async fn prepare_200_case() -> (TestApp, Value, Value) {
 
 #[tokio::test]
 async fn should_return_200_if_correct_code() {
-    let (app, verify_2fa_body, _) = prepare_200_case().await;
+    let (mut app, verify_2fa_body, _) = prepare_200_case().await;
     // This should pass, since we are calling verify-2fa for the first time
     let response_verify_fa = app.verify_2fa(&verify_2fa_body).await;
     _assert_eq_status_code(&response_verify_fa, StatusCode::OK);
+    app.clean_up().await;
 }
 
 #[test_case(serde_json::json!({
@@ -84,14 +86,15 @@ async fn should_return_200_if_correct_code() {
 }))]
 #[tokio::test]
 async fn should_return_401_if_incorrect_credentials(incorrect_body: Value) {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let response = app.verify_2fa(&incorrect_body).await;
     _assert_eq_status_code(&response, StatusCode::UNAUTHORIZED);
+    app.clean_up().await;
 }
 
 #[tokio::test]
 async fn should_return_401_if_old_code() {
-    let (app, verify_2fa_body, _) = prepare_200_case().await;
+    let (mut app, verify_2fa_body, _) = prepare_200_case().await;
     // This should pass, since we are calling verify-2fa for the first time
     let response_verify_fa = app.verify_2fa(&verify_2fa_body).await;
     _assert_eq_status_code(&response_verify_fa, StatusCode::OK);
@@ -104,4 +107,5 @@ async fn should_return_401_if_old_code() {
     assert!(!auth_cookie.value().is_empty());
     let response = app.verify_2fa(&verify_2fa_body).await;
     _assert_eq_status_code(&response, StatusCode::UNAUTHORIZED);
+    app.clean_up().await;
 }

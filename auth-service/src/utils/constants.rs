@@ -6,7 +6,6 @@ use std::env as std_env;
 // lazy_static is needed because std_env::var is not a const function.
 lazy_static! {
     pub static ref JWT_SECRET: String = get_token();
-    pub static ref POSTGRES_PASSWORD: String = get_postgres_password();
     pub static ref DATABASE_URL: String = get_database_url();
 }
 
@@ -21,13 +20,8 @@ fn retrieve_dot_env_variable(variable_key: String) -> String {
     value
 }
 
-///
 fn get_database_url() -> String {
     retrieve_dot_env_variable(String::from(env::DATABASE_URL))
-}
-
-fn get_postgres_password() -> String {
-    retrieve_dot_env_variable(String::from(env::POSTGRES_PASSWORD_ENV_VAR))
 }
 
 fn get_token() -> String {
@@ -36,7 +30,6 @@ fn get_token() -> String {
 
 pub mod env {
     pub const JWT_SECRET_ENV_VAR: &str = "JWT_SECRET";
-    pub const POSTGRES_PASSWORD_ENV_VAR: &str = "POSTGRESS_PASSWORD";
     pub const DATABASE_URL: &str = "DATABASE_URL";
 }
 

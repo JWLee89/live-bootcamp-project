@@ -7,14 +7,15 @@ use crate::signup::get_test_case;
 
 #[tokio::test]
 async fn should_return_400_if_jwt_cookie_missing() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let response = app.logout().await;
     _assert_eq_status_code(&response, StatusCode::BAD_REQUEST);
+    app.clean_up().await;
 }
 
 #[tokio::test]
 async fn should_return_401_if_invalid_token() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     // add invalid cookie
     app.cookie_jar.add_cookie_str(
@@ -27,13 +28,15 @@ async fn should_return_401_if_invalid_token() {
 
     let response = app.logout().await;
     _assert_eq_status_code(&response, StatusCode::UNAUTHORIZED);
+    app.clean_up().await;
 }
 
 #[test_case("captain teemo password", get_random_email(), false)]
 #[tokio::test]
 async fn should_return_200_if_valid_jwt_cookie(password: &str, email: String, enable_2fa: bool) {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     test_logout_once(&app, &password, &email, enable_2fa).await;
+    app.clean_up().await;
 }
 
 async fn test_logout_once(app: &TestApp, password: &str, email: &str, enable_2fa: bool) {
@@ -77,9 +80,10 @@ async fn should_return_400_if_logout_called_twice_in_a_row(
     email: String,
     enable_2fa: bool,
 ) {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     test_logout_once(&app, &password, &email, enable_2fa).await;
     // This should fail since we logged out already
     let response = app.logout().await;
     _assert_eq_status_code(&response, StatusCode::BAD_REQUEST);
+    app.clean_up().await;
 }

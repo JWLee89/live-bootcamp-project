@@ -48,7 +48,7 @@ pub fn get_test_case(password: &str, email: &str, requires_2fa: bool) -> Value {
 )]
 #[tokio::test]
 async fn should_return_400_if_invalid_input(invalid_json_payload: Value) {
-    let app = get_test_app().await;
+    let mut app = get_test_app().await;
     // Do HTTP Request
     let response = app.signup(&invalid_json_payload).await;
     // The signup route should return a 400 HTTP status code if an invalid input is sent.
@@ -70,6 +70,7 @@ async fn should_return_400_if_invalid_input(invalid_json_payload: Value) {
             .error,
         "Invalid credentials".to_owned()
     );
+    app.clean_up().await;
 }
 
 #[test_case(
@@ -82,7 +83,7 @@ async fn should_return_400_if_invalid_input(invalid_json_payload: Value) {
 async fn should_return_409_if_email_already_exists(new_user: Value) {
     // Call the signup route twice.
     // The second request should fail with a 409 HTTP status code
-    let app = get_test_app().await;
+    let mut app = get_test_app().await;
     // Do HTTP Request
     let response = app.signup(&new_user).await;
     // Should work the first time
@@ -97,12 +98,13 @@ async fn should_return_409_if_email_already_exists(new_user: Value) {
             .error,
         "User already exists".to_owned()
     );
+    app.clean_up().await;
 }
 
 #[test_case(get_test_case("password123", get_random_email().as_str(), true))]
 #[tokio::test]
 async fn should_return_201_if_valid_input(test_case: Value) {
-    let app = get_test_app().await;
+    let mut app = get_test_app().await;
 
     let response = app.signup(&test_case).await;
     assert_eq!(response.status().as_u16(), 201);
@@ -119,6 +121,7 @@ async fn should_return_201_if_valid_input(test_case: Value) {
             .expect("Could not deserialize response body to UserBody"),
         expected_response
     );
+    app.clean_up().await;
 }
 
 #[test_case(
@@ -139,7 +142,7 @@ async fn should_return_201_if_valid_input(test_case: Value) {
 )]
 #[tokio::test]
 async fn should_return_422_if_malformed_input(test_case: Value) {
-    let app = get_test_app().await;
+    let mut app = get_test_app().await;
     let response = app.signup(&test_case).await;
     assert_eq!(
         response.status().as_u16(),
@@ -147,4 +150,5 @@ async fn should_return_422_if_malformed_input(test_case: Value) {
         "Failed for input: {:?}",
         test_case
     );
+    app.clean_up().await;
 }

@@ -1,8 +1,31 @@
 use rand::Rng;
+use sqlx::PgPool;
 use uuid::Uuid;
+
+use crate::{get_postgres_pool, utils::constants::DATABASE_URL};
 
 use super::{email::Email, password::Password, user::User};
 use std::collections::HashSet;
+
+pub async fn configure_postgresql() -> PgPool {
+    // Create a new database connection pool
+    let pg_pool = get_postgres_pool(&DATABASE_URL).await.expect(
+        format!(
+            "Failed to create Postgres connection pool! Target url: {}",
+            DATABASE_URL.to_string()
+        )
+        .as_str(),
+    );
+    println!("Created pool with: {}", DATABASE_URL.to_string());
+
+    // Run database migrations against our test database!
+    sqlx::migrate!()
+        .run(&pg_pool)
+        .await
+        .expect("Failed to run migrations");
+
+    pg_pool
+}
 
 #[async_trait::async_trait]
 pub trait UserStore: Send + Sync {

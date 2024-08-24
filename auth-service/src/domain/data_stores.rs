@@ -1,5 +1,6 @@
 use rand::Rng;
 use sqlx::PgPool;
+use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
@@ -105,13 +106,30 @@ impl BannedTokenStore for HashsetBannedTokenStore {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum UserStoreError {
+    #[error("User already exists")]
     UserAlreadyExists,
+    #[error("User not found")]
     UserNotFound,
+    #[error("Invalid credentials")]
     InvalidCredentials,
+    #[error("Invalid password")]
     InvalidPassword,
+    #[error("Unexpected Error")]
     UnexpectedError,
+}
+
+impl PartialEq for UserStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::UserAlreadyExists, Self::UserAlreadyExists)
+                | (Self::UserNotFound, Self::UserNotFound)
+                | (Self::InvalidCredentials, Self::InvalidCredentials)
+                | (Self::UnexpectedError, Self::UnexpectedError)
+        )
+    }
 }
 
 // This trait represents the interface all concrete 2FA code stores should implement

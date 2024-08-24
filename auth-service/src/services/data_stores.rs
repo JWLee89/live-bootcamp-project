@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use argon2::{
     password_hash::SaltString, Algorithm, Argon2, Params, PasswordHash, PasswordHasher,
     PasswordVerifier, Version,
@@ -14,6 +12,7 @@ use crate::domain::{
     password::Password,
     user::User,
 };
+use color_eyre::eyre::{Context, Result};
 
 pub struct PostgresUserStore {
     pool: PgPool,
@@ -111,14 +110,21 @@ impl UserStore for PostgresUserStore {
 async fn verify_password_hash(
     expected_password_hash: String,
     password_candidate: String,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
-    tokio::task::spawn_blocking(move || {
-        let expected_password_hash: PasswordHash<'_> = PasswordHash::new(&expected_password_hash)?;
-        let result = Argon2::default()
-            .verify_password(password_candidate.as_bytes(), &expected_password_hash);
-        result.map_err(|err| Box::new(err) as Box<dyn Error + Send + Sync>)
+) -> Result<()> {
+    let current_span: tracing::Span = tracing::Span::current();
+    let result = tokio::task::spawn_blocking(move || {
+        current_span.in_scope(|| {
+            let expected_password_hash: PasswordHash<'_> =
+                PasswordHash::new(&expected_password_hash)?;
+
+            Argon2::default()
+                .verify_password(password_candidate.as_bytes(), &expected_password_hash)
+                .wrap_err("failed to verify password hash")
+        })
     })
-    .await?
+    .await;
+
+    result?
 }
 
 // Helper function to hash passwords before persisting them in the database.
@@ -127,17 +133,22 @@ async fn verify_password_hash(
 // separate thread pool using tokio::task::spawn_blocking. Note that you
 // will need to update the input parameters to be String types instead of &str
 #[tracing::instrument(name = "Computing password hash", skip_all)]
-async fn compute_password_hash(password: String) -> Result<String, Box<dyn Error + Send + Sync>> {
+async fn compute_password_hash(password: String) -> Result<String> {
+    let current_span: tracing::Span = tracing::Span::current();
     let compute_password_hash_task = tokio::task::spawn_blocking(move || {
-        let salt = SaltString::generate(&mut rand::thread_rng());
-        let password_hash = Argon2::new(
-            Algorithm::Argon2id,
-            Version::V0x13,
-            Params::new(15000, 2, 1, None)?,
-        )
-        .hash_password(password.as_bytes(), &salt)?
-        .to_string();
-        Ok(password_hash)
+        current_span.in_scope(|| {
+            let salt: SaltString = SaltString::generate(&mut rand::thread_rng());
+            let password_hash = Argon2::new(
+                Algorithm::Argon2id,
+                Version::V0x13,
+                Params::new(15000, 2, 1, None)?,
+            )
+            .hash_password(password.as_bytes(), &salt)?
+            .to_string();
+
+            Ok(password_hash)
+            // Err(eyre!("oh no!")) // New!
+        })
     });
     compute_password_hash_task.await?
 }

@@ -16,6 +16,7 @@ pub mod utils;
 
 use app_state::state::AppState;
 use domain::error::AuthAPIError;
+use redis::{Client, RedisResult};
 use routes::{login, logout, signup, verify_2fa, verify_token};
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -74,6 +75,11 @@ impl Application {
 /// Create a new PostgreSQL connection pool
 pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
     PgPoolOptions::new().max_connections(5).connect(url).await
+}
+
+pub fn get_redis_client(redis_hostname: String) -> RedisResult<Client> {
+    let redis_url = format!("redis://{}/", redis_hostname);
+    redis::Client::open(redis_url)
 }
 
 // TODO:

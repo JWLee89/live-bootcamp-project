@@ -2,10 +2,20 @@ use rand::Rng;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{get_postgres_pool, utils::constants::DATABASE_URL};
+use crate::{
+    get_postgres_pool, get_redis_client,
+    utils::constants::{DATABASE_URL, REDIS_HOST_NAME},
+};
 
 use super::{email::Email, password::Password, user::User};
 use std::collections::HashSet;
+
+pub fn configure_redis() -> redis::Connection {
+    get_redis_client(REDIS_HOST_NAME.to_owned())
+        .expect("Failed to get Redis client")
+        .get_connection()
+        .expect("Failed to get Redis connection")
+}
 
 pub async fn configure_postgresql() -> PgPool {
     // Create a new database connection pool
@@ -36,14 +46,15 @@ pub trait UserStore: Send + Sync {
 }
 
 #[async_trait::async_trait]
-pub trait BannedTokenStore {
-    fn insert(&mut self, token: String) -> Result<(), BannedTokenStoreError>;
-    fn token_exists(&self, token: &str) -> bool;
+pub trait BannedTokenStore: Send + Sync {
+    async fn insert(&mut self, token: String) -> Result<(), BannedTokenStoreError>;
+    async fn token_exists(&self, token: &str) -> Result<bool, BannedTokenStoreError>;
 }
 
 #[derive(Debug, PartialEq)]
 pub enum BannedTokenStoreError {
     TokenAlreadyExists,
+    TokenNotFound,
 }
 
 pub struct HashsetBannedTokenStore {
@@ -58,38 +69,38 @@ impl HashsetBannedTokenStore {
     }
 }
 
-impl BannedTokenStore for HashsetBannedTokenStore {
-    /// Insert into the store
-    /// ```
-    /// use crate::auth_service::domain::data_stores::{BannedTokenStore, HashsetBannedTokenStore};
-    /// let mut store = HashsetBannedTokenStore::new();
-    /// let sample_token = "asduashfiasbnfd".to_string();
-    /// let result = store.insert(sample_token.clone());
-    /// assert_eq!(result.is_ok(), true);
-    /// let failed_result = store.insert(sample_token.clone());
-    /// assert_eq!(failed_result.is_err(), true);
-    /// ```
-    fn insert(&mut self, token: String) -> Result<(), BannedTokenStoreError> {
-        if self.store.insert(token) {
-            Ok(())
-        } else {
-            Err(BannedTokenStoreError::TokenAlreadyExists)
-        }
-    }
+// impl BannedTokenStore for HashsetBannedTokenStore {
+//     /// Insert into the store
+//     /// ```
+//     /// use crate::auth_service::domain::data_stores::{BannedTokenStore, HashsetBannedTokenStore};
+//     /// let mut store = HashsetBannedTokenStore::new();
+//     /// let sample_token = "asduashfiasbnfd".to_string();
+//     /// let result = store.insert(sample_token.clone());
+//     /// assert_eq!(result.is_ok(), true);
+//     /// let failed_result = store.insert(sample_token.clone());
+//     /// assert_eq!(failed_result.is_err(), true);
+//     /// ```
+//     async fn insert(&mut self, token: String) -> Result<(), BannedTokenStoreError> {
+//         if self.store.insert(token){
+//             Ok(())
+//         } else {
+//             Err(BannedTokenStoreError::TokenAlreadyExists)
+//         }
+//     }
 
-    /// Check if token exists
-    /// ```
-    /// use crate::auth_service::domain::data_stores::{BannedTokenStore, HashsetBannedTokenStore};
-    /// let mut store = HashsetBannedTokenStore::new();
-    /// let sample_token = "asduashfiasbnfd".to_string();
-    /// let result = store.insert(sample_token.clone());
-    /// assert_eq!(result.is_ok(), true);
-    /// assert_eq!(store.token_exists(&sample_token), true);
-    /// ```
-    fn token_exists(&self, token: &str) -> bool {
-        self.store.contains(token)
-    }
-}
+//     /// Check if token exists
+//     /// ```
+//     /// use crate::auth_service::domain::data_stores::{BannedTokenStore, HashsetBannedTokenStore};
+//     /// let mut store = HashsetBannedTokenStore::new();
+//     /// let sample_token = "asduashfiasbnfd".to_string();
+//     /// let result = store.insert(sample_token.clone());
+//     /// assert_eq!(result.is_ok(), true);
+//     /// assert_eq!(store.token_exists(&sample_token), true);
+//     /// ```
+//     async fn token_exists(&self, token: &str) -> Result<bool, BannedTokenStoreError> {
+//         self.store.contains(token)
+//     }
+// }
 
 #[derive(Debug, PartialEq)]
 pub enum UserStoreError {

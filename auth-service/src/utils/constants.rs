@@ -7,6 +7,7 @@ use std::env as std_env;
 lazy_static! {
     pub static ref JWT_SECRET: String = get_token();
     pub static ref DATABASE_URL: String = get_database_url();
+    pub static ref REDIS_HOST_NAME: String = get_redis_host();
 }
 
 /// Add a variable key
@@ -20,6 +21,10 @@ fn retrieve_dot_env_variable(variable_key: String) -> String {
     value
 }
 
+fn get_redis_host() -> String {
+    retrieve_dot_env_variable(String::from(env::REDIS_HOST_NAME_ENV_VAR))
+}
+
 fn get_database_url() -> String {
     retrieve_dot_env_variable(String::from(env::DATABASE_URL))
 }
@@ -31,6 +36,7 @@ fn get_token() -> String {
 pub mod env {
     pub const JWT_SECRET_ENV_VAR: &str = "JWT_SECRET";
     pub const DATABASE_URL: &str = "DATABASE_URL";
+    pub const REDIS_HOST_NAME_ENV_VAR: &str = "REDIS_HOST_NAME";
 }
 
 pub const JWT_COOKIE_NAME: &str = "jwt";

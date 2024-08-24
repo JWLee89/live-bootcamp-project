@@ -102,6 +102,7 @@ async fn should_return_401_if_banned_token() {
         .write()
         .await
         .insert(auth_cookie.value().to_string())
+        .await
     {
         panic!("Ban token store addition feature is not working as expected")
     }

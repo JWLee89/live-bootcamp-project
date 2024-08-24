@@ -30,6 +30,7 @@ pub async fn logout(
         .write()
         .await
         .insert(token.to_owned())
+        .await
         .map_err(|_| AuthAPIError::UnexpectedError)?;
     // Remove JWT cookie
     let jar: CookieJar = jar.remove(JWT_COOKIE_NAME);

@@ -18,7 +18,6 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 # Set Env variables
 ENV SQLX_OFFLINE true
-ENV REDIS_HOST_NAME=redis
 RUN cargo build --release --bin auth-service
 
 # We do not need the Rust toolchain to run the binary!
@@ -27,4 +26,5 @@ FROM debian:buster-slim AS runtime
 WORKDIR /app
 COPY --from=builder /app/target/release/auth-service /usr/local/bin
 COPY --from=builder /app/assets /app/assets
+ENV REDIS_HOST_NAME=redis
 ENTRYPOINT ["/usr/local/bin/auth-service"]

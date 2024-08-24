@@ -5,4 +5,5 @@ pub mod error;
 pub mod hashmap_two_fa_code_store;
 pub mod parse;
 pub mod password;
+pub mod redis_two_fa_code_store;
 pub mod user;

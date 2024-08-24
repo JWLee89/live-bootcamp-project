@@ -55,6 +55,7 @@ pub trait BannedTokenStore: Send + Sync {
 pub enum BannedTokenStoreError {
     TokenAlreadyExists,
     TokenNotFound,
+    UnexpectedError,
 }
 
 pub struct HashsetBannedTokenStore {
@@ -69,38 +70,40 @@ impl HashsetBannedTokenStore {
     }
 }
 
-// impl BannedTokenStore for HashsetBannedTokenStore {
-//     /// Insert into the store
-//     /// ```
-//     /// use crate::auth_service::domain::data_stores::{BannedTokenStore, HashsetBannedTokenStore};
-//     /// let mut store = HashsetBannedTokenStore::new();
-//     /// let sample_token = "asduashfiasbnfd".to_string();
-//     /// let result = store.insert(sample_token.clone());
-//     /// assert_eq!(result.is_ok(), true);
-//     /// let failed_result = store.insert(sample_token.clone());
-//     /// assert_eq!(failed_result.is_err(), true);
-//     /// ```
-//     async fn insert(&mut self, token: String) -> Result<(), BannedTokenStoreError> {
-//         if self.store.insert(token){
-//             Ok(())
-//         } else {
-//             Err(BannedTokenStoreError::TokenAlreadyExists)
-//         }
-//     }
+#[async_trait::async_trait]
+impl BannedTokenStore for HashsetBannedTokenStore {
+    /// Insert into the store
+    /// ```
+    /// use tokio_test;
+    /// use crate::auth_service::domain::data_stores::{BannedTokenStore, HashsetBannedTokenStore};
+    /// tokio_test::block_on(async {
+    /// let mut store = HashsetBannedTokenStore::new();
+    /// let sample_token = "asduashfiasbnfd".to_string();
+    /// let result = store.insert(sample_token.clone()).await;
+    /// assert!(result.is_ok());
+    /// });
+    /// ```
+    async fn insert(&mut self, token: String) -> Result<(), BannedTokenStoreError> {
+        self.store.insert(token);
+        Ok(())
+    }
 
-//     /// Check if token exists
-//     /// ```
-//     /// use crate::auth_service::domain::data_stores::{BannedTokenStore, HashsetBannedTokenStore};
-//     /// let mut store = HashsetBannedTokenStore::new();
-//     /// let sample_token = "asduashfiasbnfd".to_string();
-//     /// let result = store.insert(sample_token.clone());
-//     /// assert_eq!(result.is_ok(), true);
-//     /// assert_eq!(store.token_exists(&sample_token), true);
-//     /// ```
-//     async fn token_exists(&self, token: &str) -> Result<bool, BannedTokenStoreError> {
-//         self.store.contains(token)
-//     }
-// }
+    /// Check if token exists
+    /// ```
+    /// use crate::auth_service::domain::data_stores::{BannedTokenStore, HashsetBannedTokenStore};
+    /// use tokio::test;
+    /// tokio_test::block_on(async {
+    /// let mut store = HashsetBannedTokenStore::new();
+    /// let sample_token = "asduashfiasbnfd".to_string();
+    /// let result = store.insert(sample_token.clone()).await;
+    /// assert_eq!(result.is_ok(), true);
+    /// assert_eq!(store.token_exists(&sample_token).await, Ok(true));
+    /// });
+    /// ```
+    async fn token_exists(&self, token: &str) -> Result<bool, BannedTokenStoreError> {
+        Ok(self.store.contains(token))
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum UserStoreError {
@@ -121,9 +124,7 @@ pub trait TwoFACodeStore {
         code: TwoFACode,
     ) -> Result<(), TwoFACodeStoreError>;
 
-    /// Remove the code after use
     async fn remove_code(&mut self, email: &Email) -> Result<(), TwoFACodeStoreError>;
-    /// Generate code
     async fn get_code(
         &self,
         email: &Email,
@@ -133,6 +134,7 @@ pub trait TwoFACodeStore {
 #[derive(Debug, PartialEq)]
 pub enum TwoFACodeStoreError {
     EmailAlreadyExists,
+    EmailDoesNotExist,
     LoginAttemptIdNotFound,
     UnexpectedError,
 }

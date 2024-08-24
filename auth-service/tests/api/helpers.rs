@@ -2,11 +2,12 @@ use std::{str::FromStr, sync::Arc};
 
 use auth_service::{
     app_state::state::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType},
-    domain::{
-        data_stores::HashsetBannedTokenStore, hashmap_two_fa_code_store::HashMapTwoFACodeStore,
-    },
+    domain::{data_stores::configure_redis, redis_two_fa_code_store::RedisTwoFACodeStore},
     get_postgres_pool,
-    services::{data_stores::PostgresUserStore, mock_email_client::MockEmailClient},
+    services::{
+        data_stores::PostgresUserStore, mock_email_client::MockEmailClient,
+        redis_banned_token_store::RedisBannedTokenStore,
+    },
     utils::constants::{test, DATABASE_URL},
     Application,
 };
@@ -127,17 +128,18 @@ async fn delete_database(db_name: &str) {
 
 impl TestApp {
     pub async fn new() -> Self {
-        // TODO: Abstract this out
-        // let store: Arc<RwLock<HashMapUserStore>> =
-        //     Arc::new(RwLock::new(HashMapUserStore::default()));
         let db_name = Uuid::new_v4().to_string();
-        // We are creating a new database for each test case, and we need to ensure each database has a unique name!
+        let redis_connection = Arc::new(RwLock::new(configure_redis()));
         let pg_pool = configure_postgresql(&db_name).await;
+
+        // Required stores
         let store = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
-        let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::new()));
-        let two_fa_code_store: Arc<RwLock<HashMapTwoFACodeStore>> =
-            Arc::new(RwLock::new(HashMapTwoFACodeStore::default()));
+        let banned_token_store = Arc::new(RwLock::new(RedisBannedTokenStore::new(
+            redis_connection.clone(),
+        )));
+        let two_fa_code_store = Arc::new(RwLock::new(RedisTwoFACodeStore::new(redis_connection)));
         let email_client = Arc::new(RwLock::new(MockEmailClient::default()));
+
         let app_state: AppState = AppState::new(
             store,
             banned_token_store.clone(),

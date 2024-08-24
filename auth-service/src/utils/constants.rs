@@ -22,7 +22,8 @@ fn retrieve_dot_env_variable(variable_key: String) -> String {
 }
 
 fn get_redis_host() -> String {
-    retrieve_dot_env_variable(String::from(env::REDIS_HOST_NAME_ENV_VAR))
+    dotenv().ok();
+    std_env::var(env::REDIS_HOST_NAME_ENV_VAR).unwrap_or(DEFAULT_REDIS_HOSTNAME.to_owned())
 }
 
 fn get_database_url() -> String {
@@ -40,6 +41,8 @@ pub mod env {
 }
 
 pub const JWT_COOKIE_NAME: &str = "jwt";
+// Needed to get it working in production
+pub const DEFAULT_REDIS_HOSTNAME: &str = "127.0.0.1";
 
 pub mod prod {
     pub const APP_ADDRESS: &str = "0.0.0.0:3000";

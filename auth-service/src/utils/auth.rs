@@ -62,10 +62,19 @@ pub async fn validate_token(
     banned_token_store: BannedTokenStoreType,
 ) -> Result<Claims, jsonwebtoken::errors::Error> {
     // If exists in banned token store
-    if banned_token_store.read().await.token_exists(token) {
-        return Err(jsonwebtoken::errors::Error::from(
-            jsonwebtoken::errors::ErrorKind::InvalidToken,
-        ));
+    match banned_token_store.read().await.token_exists(token).await {
+        Ok(value) => {
+            if value {
+                return Err(jsonwebtoken::errors::Error::from(
+                    jsonwebtoken::errors::ErrorKind::InvalidToken,
+                ));
+            }
+        }
+        Err(_) => {
+            return Err(jsonwebtoken::errors::Error::from(
+                jsonwebtoken::errors::ErrorKind::InvalidToken,
+            ));
+        }
     }
 
     decode::<Claims>(
@@ -134,8 +143,9 @@ mod tests {
     async fn test_validate_token_with_valid_token() {
         let email = Email::parse("test@example.com".to_owned()).unwrap();
         let token = generate_auth_token(&email).unwrap();
-        let banned_token_store: Arc<RwLock<HashsetBannedTokenStore>> =
-            Arc::new(RwLock::new(HashsetBannedTokenStore::new()));
+        let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::new()));
+
+        // Validate
         let result = validate_token(&token, banned_token_store).await.unwrap();
         assert_eq!(result.sub, "test@example.com");
 

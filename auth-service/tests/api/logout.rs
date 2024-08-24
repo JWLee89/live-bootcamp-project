@@ -70,7 +70,10 @@ async fn test_logout_once(app: &TestApp, password: &str, email: &str, enable_2fa
 
     // Check whether token was added to banned token store
     let banned_token_store = app.banned_token_store.read().await;
-    assert!(banned_token_store.token_exists(token));
+    assert!(banned_token_store
+        .token_exists(token)
+        .await
+        .expect("Token should have been added to banned store"));
 }
 
 #[test_case("captain teemo password", get_random_email(), false)]

@@ -7,7 +7,7 @@ use crate::domain::{
 };
 
 // Using a type alias to improve readability!
-pub type UserStoreType = Arc<RwLock<dyn UserStore>>;
+pub type UserStoreType = Arc<RwLock<dyn UserStore + Send + Sync>>;
 pub type BannedTokenStoreType = Arc<RwLock<dyn BannedTokenStore + Send + Sync>>;
 pub type TwoFACodeStoreType = Arc<RwLock<dyn TwoFACodeStore + Send + Sync>>;
 pub type EmailClientType = Arc<RwLock<dyn EmailClient + Send + Sync>>;

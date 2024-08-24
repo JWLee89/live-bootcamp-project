@@ -10,13 +10,14 @@ use auth_service::{
         data_stores::PostgresUserStore, mock_email_client::MockEmailClient,
         redis_banned_token_store::RedisBannedTokenStore,
     },
-    utils::constants::prod,
+    utils::{constants::prod, tracing::init_tracing},
     Application,
 };
 use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() {
+    init_tracing();
     // Redis and PostgreSQL
     let redis_connection = Arc::new(RwLock::new(configure_redis()));
     let pool = configure_postgresql().await;

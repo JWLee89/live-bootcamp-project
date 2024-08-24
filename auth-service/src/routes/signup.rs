@@ -6,6 +6,7 @@ use crate::{
     domain::{email::Email, error::AuthAPIError, parse::Parseable, password::Password, user::User},
 };
 
+#[tracing::instrument(name = "Signup", skip_all, err(Debug))]
 pub async fn signup(
     state: State<AppState>,
     Json(request): Json<SignupRequest>,

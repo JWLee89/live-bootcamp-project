@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use color_eyre::eyre::Result;
 use validator::{validate_email, ValidationError};
 
 use super::parse::Parseable;
@@ -13,15 +14,14 @@ impl AsRef<str> for Email {
     }
 }
 
-impl Parseable<String, ValidationError> for Email {
-    type Output = Email;
-    fn parse(email: String) -> Result<Email, ValidationError> {
+impl Parseable<String> for Email {
+    fn parse(email: String) -> Result<Self> {
         if validate_email(&email) {
             Ok(Email(email))
         } else {
             let mut val_err = ValidationError::new("invalid email address");
             val_err.add_param(Cow::Borrowed("input"), &email);
-            Err(val_err)
+            Err(val_err.into())
         }
     }
 }
@@ -48,14 +48,8 @@ mod test {
     #[test_case(
         Email::parse("woo@min_at_asdsad".to_string())
     )]
-    fn should_be_invalid_emails(invalid_email: Result<Email, ValidationError>) {
+    fn should_be_invalid_emails(invalid_email: Result<Email>) {
+        // TODO: update tests to make it more robust
         assert_eq!(invalid_email.is_err(), true);
-        if let Err(e) = invalid_email {
-            let input_key = "input";
-            let mut err = ValidationError::new("invalid email address");
-            let email = e.params.get(input_key).unwrap();
-            err.add_param(Cow::Borrowed(input_key), email);
-            assert_eq!(e, err);
-        }
     }
 }

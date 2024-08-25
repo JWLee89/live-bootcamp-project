@@ -8,6 +8,7 @@ pub struct VerifyTokenRequest {
     token: String,
 }
 
+#[tracing::instrument("Verify authentication token", skip_all)]
 pub async fn verify_token(
     State(state): State<AppState>,
     Json(request): Json<VerifyTokenRequest>,

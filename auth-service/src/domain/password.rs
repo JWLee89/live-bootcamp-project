@@ -1,6 +1,7 @@
 use validator::ValidationError;
 
 use super::parse::Parseable;
+use color_eyre::eyre::Result;
 
 #[derive(Debug, PartialEq, Clone, Hash)]
 pub struct Password(String);
@@ -13,19 +14,15 @@ impl AsRef<str> for Password {
 
 const MINIMUM_PASSWORD_LEN: usize = 8;
 
-impl Parseable<String, ValidationError> for Password {
-    fn parse(password: String) -> Result<Password, ValidationError> {
+impl Parseable<String> for Password {
+    fn parse(password: String) -> Result<Self> {
         // Password cannot be longer
         if &password.len() < &MINIMUM_PASSWORD_LEN {
-            Err(ValidationError::new(
-                "Invalid password: Must contain at least 8 characters",
-            ))
+            Err(ValidationError::new("Invalid password: Must contain at least 8 characters").into())
         } else {
             Ok(Password(password))
         }
     }
-
-    type Output = Password;
 }
 
 #[cfg(test)]

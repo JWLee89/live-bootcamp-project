@@ -1,3 +1,5 @@
+use color_eyre::eyre::Result;
+use color_eyre::eyre::{eyre, Context, Report};
 use rand::Rng;
 use sqlx::PgPool;
 use thiserror::Error;
@@ -52,11 +54,14 @@ pub trait BannedTokenStore: Send + Sync {
     async fn token_exists(&self, token: &str) -> Result<bool, BannedTokenStoreError>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum BannedTokenStoreError {
+    #[error("Token already exists")]
     TokenAlreadyExists,
+    #[error("Token not found")]
     TokenNotFound,
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
 }
 
 pub struct HashsetBannedTokenStore {
@@ -98,7 +103,7 @@ impl BannedTokenStore for HashsetBannedTokenStore {
     /// let sample_token = "asduashfiasbnfd".to_string();
     /// let result = store.insert(sample_token.clone()).await;
     /// assert_eq!(result.is_ok(), true);
-    /// assert_eq!(store.token_exists(&sample_token).await, Ok(true));
+    /// assert!(store.token_exists(&sample_token).await.expect("Token should exist after inserting"));
     /// });
     /// ```
     async fn token_exists(&self, token: &str) -> Result<bool, BannedTokenStoreError> {
@@ -116,8 +121,8 @@ pub enum UserStoreError {
     InvalidCredentials,
     #[error("Invalid password")]
     InvalidPassword,
-    #[error("Unexpected Error")]
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
 }
 
 impl PartialEq for UserStoreError {
@@ -127,7 +132,8 @@ impl PartialEq for UserStoreError {
             (Self::UserAlreadyExists, Self::UserAlreadyExists)
                 | (Self::UserNotFound, Self::UserNotFound)
                 | (Self::InvalidCredentials, Self::InvalidCredentials)
-                | (Self::UnexpectedError, Self::UnexpectedError)
+                | (Self::InvalidPassword, Self::InvalidPassword)
+                | (Self::UnexpectedError(_), Self::UnexpectedError(_))
         )
     }
 }
@@ -149,18 +155,42 @@ pub trait TwoFACodeStore {
     ) -> Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum TwoFACodeStoreError {
-    EmailAlreadyExists,
-    EmailDoesNotExist,
+    #[error("Login Attempt ID not found")]
     LoginAttemptIdNotFound,
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
+    #[error("Email adread exists")]
+    EmailAlreadyExists,
 }
 
-#[derive(Debug, PartialEq)]
+impl PartialEq for TwoFACodeStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::LoginAttemptIdNotFound, Self::LoginAttemptIdNotFound)
+                | (Self::EmailAlreadyExists, Self::EmailAlreadyExists)
+                | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
+    }
+}
+
+#[derive(Debug, Error)]
 pub enum TwoFACodeError {
+    #[error("Invalid UUID")]
     InvalidUuid,
+    #[error("Code out of range")]
     CodeOutOfRange,
+}
+
+impl PartialEq for TwoFACodeError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::InvalidUuid, Self::InvalidUuid) | (Self::CodeOutOfRange, Self::CodeOutOfRange)
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -172,14 +202,11 @@ impl LoginAttemptId {
     /// use auth_service::domain::data_stores::{LoginAttemptId, TwoFACodeError};
     /// let bad_login_attempt_id = LoginAttemptId::parse("should_not_work".to_string());
     /// assert!(bad_login_attempt_id.is_err());
-    /// if let Err(e) = bad_login_attempt_id {
-    ///     assert_eq!(e, TwoFACodeError::InvalidUuid);
-    /// }
     /// ```
-    pub fn parse(id: String) -> Result<Self, TwoFACodeError> {
+    pub fn parse(id: String) -> Result<Self> {
         // Use the `parse_str` function from the `uuid` crate to ensure `id` is a valid UUID
-        let _ = Uuid::parse_str(id.as_str()).map_err(|_| TwoFACodeError::InvalidUuid)?;
-        Ok(Self(id))
+        let parsed_id = Uuid::parse_str(id.as_str()).wrap_err("Invalid login attempt id")?;
+        Ok(Self(parsed_id.to_string()))
     }
 }
 
@@ -205,24 +232,20 @@ impl TwoFACode {
     /// Parse a 2fa code
     /// ```
     /// use crate::auth_service::domain::data_stores::{TwoFACode, TwoFACodeError};
-    /// let num = 91234;
+    /// let num = 912304;
     /// let valid_two_fa = TwoFACode::parse(num.to_string()).unwrap();
     /// assert_eq!(valid_two_fa.as_ref().parse::<u32>().unwrap(), num);
     ///
     /// // This should fail: passing in a non number
     /// let invalid = TwoFACode::parse("I am not a number".to_string());
-    /// if let Err(e) = invalid {
-    ///     assert_eq!(e, TwoFACodeError::InvalidUuid);
-    /// }
+    /// assert!(invalid.is_err());
     /// ```
-    pub fn parse(code: String) -> Result<Self, TwoFACodeError> {
-        let code_as_int = code
-            .parse::<u32>()
-            .map_err(|_| TwoFACodeError::InvalidUuid)?;
-        if code_as_int > 999999 {
-            Err(TwoFACodeError::CodeOutOfRange)
-        } else {
+    pub fn parse(code: String) -> Result<Self> {
+        let code_as_u32 = code.parse::<u32>().wrap_err("Invalid UUID")?; // Updated!
+        if (100_000..=999_999).contains(&code_as_u32) {
             Ok(Self(code))
+        } else {
+            Err(eyre!("Code out of range"))
         }
     }
 }
@@ -235,14 +258,14 @@ impl Default for TwoFACode {
     /// let default_val = TwoFACode::default();
     /// let val = default_val.as_ref();
     /// let char_count = val.chars().count();
-    /// let is_between_0_and_6 = char_count >= 0 && char_count < 7;
+    /// let is_between_0_and_6 = char_count < 7;
     /// assert!(is_between_0_and_6);
     /// ```
     fn default() -> Self {
         let mut rng = rand::thread_rng();
         // Maybe it is not a good idea to hard-code these numbers here.
         // Makes writing tests difficult
-        let number: u32 = rng.gen_range(0..999999);
+        let number: u32 = rng.gen_range(100000..999999);
         Self::parse(format!("{}", number)).unwrap()
     }
 }

@@ -1,3 +1,4 @@
+use color_eyre::eyre::Report;
 use thiserror::Error;
 /// Enums for Authentication API-related Errors.
 /// Note: this does not map errors to HTTP status codes.
@@ -14,12 +15,12 @@ pub enum AuthAPIError {
     UserAlreadyExists,
     #[error("Invalid credentials")]
     InvalidCredentials,
-    #[error("Missing token")]
-    MissingToken,
-    #[error("Invalid Token")]
-    InvalidToken,
-    #[error("Unexpected Error")]
-    UnexpectedError,
     #[error("Incorrect credentials")]
     IncorrectCredentials,
+    #[error("Missing token")]
+    MissingToken,
+    #[error("Invalid token")]
+    InvalidToken,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
 }

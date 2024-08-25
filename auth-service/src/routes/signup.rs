@@ -26,9 +26,7 @@ pub async fn signup(
             });
             Ok((StatusCode::CREATED, response))
         }
-        // Might be better to return more meaningful message later on
-        // Maybe there is also a better way to do this.
-        Err(_) => Err(AuthAPIError::UserAlreadyExists),
+        Err(_) => Err(AuthAPIError::UserAlreadyExists), // Err(e) => Err(AuthAPIError::UnexpectedError(e.into())),
     }
 }
 

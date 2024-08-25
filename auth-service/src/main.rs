@@ -15,8 +15,7 @@ use auth_service::{
 };
 use tokio::sync::RwLock;
 
-#[tokio::main]
-async fn main() {
+async fn init() {
     color_eyre::install().expect("Failed to install color_eyre");
     init_tracing().expect("Failed to initialize tracing");
     // Redis and PostgreSQL
@@ -47,4 +46,9 @@ async fn main() {
         .expect("Failed to build app");
 
     app.run().await.expect("Failed to run app");
+}
+
+#[tokio::main]
+async fn main() {
+    init().await;
 }

@@ -22,6 +22,7 @@ pub struct Verify2FARequest {
     pub two_fa_code: String,
 }
 
+#[tracing::instrument(name = "Verify two-factor auth", skip_all)]
 pub async fn verify_2fa(
     state: State<AppState>,
     jar: CookieJar,
@@ -52,13 +53,13 @@ pub async fn verify_2fa(
 
     // The cookie jar should get updated with a new JWT auth cookie if the email,
     // login attempt ID, and 2FA code are correct.
-    if two_fa_code_store.remove_code(&email).await.is_err() {
-        return Err(AuthAPIError::UnexpectedError);
+    if let Err(e) = two_fa_code_store.remove_code(&email).await {
+        return Err(AuthAPIError::UnexpectedError(e.into()));
     }
 
     let cookie = match generate_auth_cookie(&email) {
         Ok(cookie) => cookie,
-        Err(_) => return Err(AuthAPIError::UnexpectedError),
+        Err(e) => return Err(AuthAPIError::UnexpectedError(e.into())),
     };
 
     let updated_jar = jar.add(cookie);

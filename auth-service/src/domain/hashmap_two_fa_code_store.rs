@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-
 use crate::domain::{
     data_stores::{LoginAttemptId, TwoFACode, TwoFACodeStore, TwoFACodeStoreError},
     email::Email,
 };
+use color_eyre::eyre::Result;
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct HashMapTwoFACodeStore {

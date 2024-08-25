@@ -32,7 +32,7 @@ impl UserStore for PostgresUserStore {
         let hashed_password =
             match compute_password_hash(String::from(user.password.as_ref())).await {
                 Ok(password) => password,
-                Err(_) => return Err(UserStoreError::UnexpectedError),
+                Err(e) => return Err(UserStoreError::UnexpectedError(e.into())),
             };
         // TODO: See if there is a better way to do this!
         let result = sqlx::query(
@@ -50,7 +50,7 @@ impl UserStore for PostgresUserStore {
 
         match result {
             Ok(_) => Ok(()),
-            Err(_) => Err(UserStoreError::UnexpectedError),
+            Err(e) => Err(UserStoreError::UnexpectedError(e.into())),
         }
     }
 
@@ -67,9 +67,13 @@ impl UserStore for PostgresUserStore {
         .await
         .map_err(|_| UserStoreError::UserNotFound)?;
         let user = User::new(
-            Email::parse(result.0).map_err(|_| UserStoreError::UnexpectedError)?,
+            Email::parse(result.0)
+                .wrap_err("Cannot parse email")
+                .map_err(|e| UserStoreError::UnexpectedError(e.into()))?,
             result.2,
-            Password::parse(result.1).map_err(|_| UserStoreError::UnexpectedError)?,
+            Password::parse(result.1)
+                .wrap_err("Cannot parse password")
+                .map_err(|e| UserStoreError::UnexpectedError(e.into()))?,
         );
         Ok(user)
     }

@@ -5,6 +5,7 @@ use auth_service::{
     utils::constants::JWT_COOKIE_NAME,
 };
 use reqwest::StatusCode;
+use secrecy::Secret;
 use serde_json::Value;
 use std::fmt;
 use test_case::test_case;
@@ -141,7 +142,7 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
     email_string.pop();
     email_string.remove(0);
 
-    let email = Email::parse(email_string).unwrap();
+    let email = Email::parse(Secret::new(email_string)).unwrap();
     let get_code_result = two_fa_store.get_code(&email).await;
     if let Err(e) = get_code_result {
         let error_msg = format!(

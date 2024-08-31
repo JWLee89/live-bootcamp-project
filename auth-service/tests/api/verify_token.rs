@@ -1,6 +1,7 @@
 use crate::helpers::{TestApp, _assert_eq_status_code, get_random_email};
 use auth_service::utils::constants::JWT_COOKIE_NAME;
 use reqwest::StatusCode;
+use secrecy::Secret;
 use serde_json::Value;
 use test_case::test_case;
 
@@ -101,7 +102,7 @@ async fn should_return_401_if_banned_token() {
         .banned_token_store
         .write()
         .await
-        .insert(auth_cookie.value().to_string())
+        .insert(Secret::new(auth_cookie.value().to_string()))
         .await
     {
         panic!("Ban token store addition feature is not working as expected")

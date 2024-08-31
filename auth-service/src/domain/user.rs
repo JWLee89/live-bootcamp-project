@@ -15,9 +15,10 @@ impl User {
     /// use crate::auth_service::domain::parse::Parseable;
     /// use crate::auth_service::domain::email::Email;
     /// use crate::auth_service::domain::password::Password;
+    /// use secrecy::{ExposeSecret, Secret};
     ///
-    /// let email = Email::parse("cowbell@email.com".to_string()).unwrap();
-    /// let password = Password::parse("PasswordValid".to_string()).unwrap();
+    /// let email = Email::parse(Secret::new("cowbell@email.com".to_string())).unwrap();
+    /// let password = Password::parse(Secret::new("PasswordValid".to_string())).unwrap();
     /// let requires_two_factor_auth = false;
     /// let user = User::new(email, requires_two_factor_auth, password);
     /// ```

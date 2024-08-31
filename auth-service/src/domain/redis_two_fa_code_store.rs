@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use color_eyre::eyre::Context;
 use redis::{Commands, Connection};
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
@@ -34,8 +35,8 @@ impl TwoFACodeStore for RedisTwoFACodeStore {
         let key = get_key(&email);
         // 2. Create a TwoFATuple instance.
         let two_fa_tuple = (
-            login_attempt_id.as_ref().to_string(),
-            code.as_ref().to_string(),
+            login_attempt_id.as_ref().expose_secret(),
+            code.as_ref().expose_secret(),
         );
         // 3. Use serde_json::to_string to serialize the TwoFATuple instance into a JSON string.
         // Return TwoFACodeStoreError::UnexpectedError if serialization fails.
@@ -103,5 +104,5 @@ const TEN_MINUTES_IN_SECONDS: u64 = 600;
 const TWO_FA_CODE_PREFIX: &str = "two_fa_code:";
 
 fn get_key(email: &Email) -> String {
-    format!("{}{}", TWO_FA_CODE_PREFIX, email.as_ref())
+    format!("{}{}", TWO_FA_CODE_PREFIX, email.as_ref().expose_secret())
 }

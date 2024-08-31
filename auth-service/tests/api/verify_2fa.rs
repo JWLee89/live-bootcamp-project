@@ -8,13 +8,15 @@ use auth_service::{
     utils::constants::JWT_COOKIE_NAME,
 };
 use reqwest::StatusCode;
+use secrecy::ExposeSecret;
+use secrecy::Secret;
 use serde_json::Value;
 use test_case::test_case;
 
 #[test_case(serde_json::json!({}))]
 #[test_case(serde_json::json!({
     "email": "bob@gmail.com",
-    "loginAttemptId": LoginAttemptId::default().as_ref(),
+    "loginAttemptId": LoginAttemptId::default().as_ref().expose_secret(),
     "2FACodeIsWrong": "invalidcode",
 }))]
 #[test_case(serde_json::json!({
@@ -38,7 +40,7 @@ async fn prepare_200_case() -> (TestApp, Value, Value) {
 
     // Call login
     let response_login = app.login(&login_body).await;
-    let email_object = Email::parse(email.to_string()).unwrap();
+    let email_object = Email::parse(Secret::new(email.to_string())).unwrap();
 
     // Get two factor auth code
     let two_fa_code = app
@@ -60,7 +62,7 @@ async fn prepare_200_case() -> (TestApp, Value, Value) {
     let verify_2fa_body = serde_json::json!({
         "email": email,
         "loginAttemptId": login_attempt_id,
-        "2FACode": two_fa_code.1.as_ref(),
+        "2FACode": two_fa_code.1.as_ref().expose_secret(),
     });
     (app, verify_2fa_body, login_body)
 }
@@ -76,12 +78,12 @@ async fn should_return_200_if_correct_code() {
 
 #[test_case(serde_json::json!({
     "email": "bob@gmail.com",
-    "loginAttemptId": LoginAttemptId::default().as_ref(),
+    "loginAttemptId": LoginAttemptId::default().as_ref().expose_secret(),
     "2FACode": "invalidcode",
 }))]
 #[test_case(serde_json::json!({
     "email": "another_email@hotmal.com",
-    "loginAttemptId": LoginAttemptId::default().as_ref(),
+    "loginAttemptId": LoginAttemptId::default().as_ref().expose_secret(),
     "2FACode": "123452",
 }))]
 #[tokio::test]

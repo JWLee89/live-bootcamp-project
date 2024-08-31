@@ -1,5 +1,6 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
+use secrecy::Secret;
 use serde::Deserialize;
 
 use crate::{
@@ -30,7 +31,8 @@ pub async fn verify_2fa(
 ) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
     // perform input validation
     // TODO: Can we reduce duplicate: |_| AuthAPIError::InvalidCredentials
-    let email = Email::parse(request.email).map_err(|_| AuthAPIError::InvalidCredentials)?;
+    let email =
+        Email::parse(Secret::new(request.email)).map_err(|_| AuthAPIError::InvalidCredentials)?;
     let login_attempt_id = LoginAttemptId::parse(request.login_attempt_id)
         .map_err(|_| AuthAPIError::InvalidCredentials)?;
     let two_fa_code =

@@ -20,6 +20,7 @@ impl TwoFACodeStore for HashMapTwoFACodeStore {
     /// ```
     /// // Imports
     /// use tokio_test;
+    /// use secrecy::{ExposeSecret, Secret};
     /// use auth_service::domain::data_stores::{TwoFACodeStore, TwoFACodeStoreError, TwoFACode, LoginAttemptId};
     /// use auth_service::domain::hashmap_two_fa_code_store::HashMapTwoFACodeStore;
     /// use auth_service::domain::email::Email;
@@ -29,7 +30,7 @@ impl TwoFACodeStore for HashMapTwoFACodeStore {
     /// let mut code_store: HashMapTwoFACodeStore = Default::default();
     /// let login_attempt_id = LoginAttemptId::default();
     /// let code: TwoFACode = TwoFACode::default();
-    /// let email = Email::parse("jaymo@gmail.com".to_string()).unwrap();
+    /// let email = Email::parse(Secret::new("jaymo@gmail.com".to_string())).unwrap();
     ///
     /// tokio_test::block_on(async {
     ///   // Should be okay, since it does not exist
@@ -66,6 +67,7 @@ impl TwoFACodeStore for HashMapTwoFACodeStore {
     /// ```
     /// // Imports
     /// use tokio_test;
+    /// use secrecy::{ExposeSecret, Secret};
     /// use auth_service::domain::data_stores::{TwoFACodeStore, TwoFACodeStoreError, TwoFACode, LoginAttemptId};
     /// use auth_service::domain::hashmap_two_fa_code_store::HashMapTwoFACodeStore;
     /// use auth_service::domain::email::Email;
@@ -75,7 +77,7 @@ impl TwoFACodeStore for HashMapTwoFACodeStore {
     /// let mut code_store: HashMapTwoFACodeStore = Default::default();
     /// let login_attempt_id = LoginAttemptId::default();
     /// let code: TwoFACode = TwoFACode::default();
-    /// let email = Email::parse("jaymo@gmail.com".to_string()).unwrap();
+    /// let email = Email::parse(Secret::new("jaymo@gmail.com".to_string())).unwrap();
     ///
     /// // Should return error if it does not exist
     /// tokio_test::block_on(async {
@@ -122,6 +124,7 @@ impl TwoFACodeStore for HashMapTwoFACodeStore {
     /// ```
     /// // Imports
     /// use tokio_test;
+    /// use secrecy::{ExposeSecret, Secret};
     /// use auth_service::domain::data_stores::{TwoFACodeStore, TwoFACodeStoreError, TwoFACode, LoginAttemptId};
     /// use auth_service::domain::hashmap_two_fa_code_store::HashMapTwoFACodeStore;
     /// use auth_service::domain::email::Email;
@@ -131,7 +134,7 @@ impl TwoFACodeStore for HashMapTwoFACodeStore {
     /// let mut code_store: HashMapTwoFACodeStore = Default::default();
     /// let login_attempt_id = LoginAttemptId::default();
     /// let code: TwoFACode = TwoFACode::default();
-    /// let email = Email::parse("jaymo@gmail.com".to_string()).unwrap();
+    /// let email = Email::parse(Secret::new("jaymo@gmail.com".to_string())).unwrap();
     ///
     /// // Should return error if it does not exist
     /// tokio_test::block_on(async {

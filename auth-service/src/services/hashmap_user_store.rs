@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use secrecy::ExposeSecret;
+
 use crate::domain::{
     data_stores::{UserStore, UserStoreError},
     email::Email,
@@ -53,7 +55,7 @@ impl UserStore for HashMapUserStore {
             .user_store
             .get(email)
             .ok_or(UserStoreError::UserNotFound)?;
-        if user.password.as_ref() != password.as_ref() {
+        if user.password.as_ref().expose_secret() != password.as_ref().expose_secret() {
             return Err(UserStoreError::InvalidPassword);
         }
         Ok(())
@@ -64,6 +66,7 @@ impl UserStore for HashMapUserStore {
 mod tests {
     use super::*;
     use crate::domain::{parse::Parseable, password::Password, user::User};
+    use secrecy::{ExposeSecret, Secret};
     use test_case::test_case;
 
     // Would be cool if we could re-use this object
@@ -79,9 +82,9 @@ mod tests {
     async fn test_add_user(email: String, requires_2fa: bool) {
         // TODO add username
         let user = User::new(
-            Email::parse(email.clone()).unwrap(),
+            Email::parse(Secret::new(email.clone())).unwrap(),
             requires_2fa,
-            Password::parse("captain teemo".to_string()).unwrap(),
+            Password::parse(Secret::new("captain teemo".to_string())).unwrap(),
         );
         let mut user_store = empty_hashmap_user_store();
         assert_eq!(user_store.count(), 0);
@@ -97,17 +100,17 @@ mod tests {
     }
 
     #[test_case(
-        Email::parse("test_email@gmail.com".to_owned()).unwrap()
+        Email::parse(Secret::new("test_email@gmail.com".to_string())).unwrap()
     )]
     #[test_case(
-        Email::parse("email@hotmail.com".to_string()).unwrap()
+        Email::parse(Secret::new("email@hotmail.com".to_string())).unwrap()
     )]
     #[tokio::test]
     async fn test_get_user(email: Email) {
         let user = User::new(
             email.clone(),
             false,
-            Password::parse("a valid password".to_string()).unwrap(),
+            Password::parse(Secret::new("a valid password".to_string())).unwrap(),
         );
         let mut user_store = empty_hashmap_user_store();
 
@@ -126,18 +129,18 @@ mod tests {
     }
 
     #[test_case(
-        Email::parse("some_password@gmail.com".to_string()).unwrap(),
-        Password::parse("valid password".to_owned()).unwrap()
+        Email::parse(Secret::new("some_password@gmail.com".to_string())).unwrap(),
+        Password::parse(Secret::new("valid password".to_owned())).unwrap()
     )]
     #[test_case(
-        Email::parse("email@hotmail.com".to_string()).unwrap(),
-        Password::parse("valid password".to_owned()).unwrap()
+        Email::parse(Secret::new("email@hotmail.com".to_string())).unwrap(),
+        Password::parse(Secret::new("valid password".to_owned())).unwrap()
     )]
     #[tokio::test]
     async fn test_validate_user(email: Email, password: Password) {
         let user = User::new(email.clone(), false, password);
         let mut user_store = empty_hashmap_user_store();
-        let wrong_password = Password::parse("wrongPassword".to_string()).unwrap();
+        let wrong_password = Password::parse(Secret::new("wrongPassword".to_string())).unwrap();
 
         // Case 1. UserStoreError::UserNotFound
         let error = user_store.validate_user(&email, &wrong_password).await;
@@ -146,7 +149,10 @@ mod tests {
         // Case 2. UserStoreError::InvalidPassword
         user_store.add_user(user.clone()).await.unwrap();
         // Check to see whether password does not equal wrong password
-        assert_ne!(user.password.as_ref(), wrong_password.as_ref());
+        assert_ne!(
+            user.password.as_ref().expose_secret(),
+            wrong_password.as_ref().expose_secret()
+        );
         let error = user_store.validate_user(&email, &wrong_password).await;
         assert_eq!(error, Err(UserStoreError::InvalidPassword));
 

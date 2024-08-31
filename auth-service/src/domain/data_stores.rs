@@ -1,6 +1,7 @@
 use color_eyre::eyre::Result;
 use color_eyre::eyre::{eyre, Context, Report};
 use rand::Rng;
+use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
 use thiserror::Error;
 use uuid::Uuid;
@@ -50,8 +51,8 @@ pub trait UserStore: Send + Sync {
 
 #[async_trait::async_trait]
 pub trait BannedTokenStore: Send + Sync {
-    async fn insert(&mut self, token: String) -> Result<(), BannedTokenStoreError>;
-    async fn token_exists(&self, token: &str) -> Result<bool, BannedTokenStoreError>;
+    async fn insert(&mut self, token: Secret<String>) -> Result<(), BannedTokenStoreError>;
+    async fn token_exists(&self, token: &Secret<String>) -> Result<bool, BannedTokenStoreError>;
 }
 
 #[derive(Debug, Error)]
@@ -81,33 +82,35 @@ impl BannedTokenStore for HashsetBannedTokenStore {
     /// Insert into the store
     /// ```
     /// use tokio_test;
+    /// use secrecy::Secret;
     /// use crate::auth_service::domain::data_stores::{BannedTokenStore, HashsetBannedTokenStore};
     /// tokio_test::block_on(async {
     /// let mut store = HashsetBannedTokenStore::new();
     /// let sample_token = "asduashfiasbnfd".to_string();
-    /// let result = store.insert(sample_token.clone()).await;
+    /// let result = store.insert(Secret::new(sample_token.clone())).await;
     /// assert!(result.is_ok());
     /// });
     /// ```
-    async fn insert(&mut self, token: String) -> Result<(), BannedTokenStoreError> {
-        self.store.insert(token);
+    async fn insert(&mut self, token: Secret<String>) -> Result<(), BannedTokenStoreError> {
+        self.store.insert(token.expose_secret().to_owned());
         Ok(())
     }
 
     /// Check if token exists
     /// ```
+    /// use secrecy::Secret;
     /// use crate::auth_service::domain::data_stores::{BannedTokenStore, HashsetBannedTokenStore};
     /// use tokio::test;
     /// tokio_test::block_on(async {
     /// let mut store = HashsetBannedTokenStore::new();
-    /// let sample_token = "asduashfiasbnfd".to_string();
+    /// let sample_token = Secret::new("asduashfiasbnfd".to_string());
     /// let result = store.insert(sample_token.clone()).await;
     /// assert_eq!(result.is_ok(), true);
     /// assert!(store.token_exists(&sample_token).await.expect("Token should exist after inserting"));
     /// });
     /// ```
-    async fn token_exists(&self, token: &str) -> Result<bool, BannedTokenStoreError> {
-        Ok(self.store.contains(token))
+    async fn token_exists(&self, token: &Secret<String>) -> Result<bool, BannedTokenStoreError> {
+        Ok(self.store.contains(token.expose_secret()))
     }
 }
 
@@ -193,8 +196,14 @@ impl PartialEq for TwoFACodeError {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct LoginAttemptId(String);
+#[derive(Debug, Clone)]
+pub struct LoginAttemptId(Secret<String>);
+
+impl PartialEq for LoginAttemptId {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.expose_secret() == other.0.expose_secret()
+    }
+}
 
 impl LoginAttemptId {
     /// Parse uid, which should be a valid UUID
@@ -206,7 +215,7 @@ impl LoginAttemptId {
     pub fn parse(id: String) -> Result<Self> {
         // Use the `parse_str` function from the `uuid` crate to ensure `id` is a valid UUID
         let parsed_id = Uuid::parse_str(id.as_str()).wrap_err("Invalid login attempt id")?;
-        Ok(Self(parsed_id.to_string()))
+        Ok(Self(Secret::new(parsed_id.to_string())))
     }
 }
 
@@ -219,22 +228,29 @@ impl Default for LoginAttemptId {
     }
 }
 
-impl AsRef<str> for LoginAttemptId {
-    fn as_ref(&self) -> &str {
-        self.0.as_str()
+impl AsRef<Secret<String>> for LoginAttemptId {
+    fn as_ref(&self) -> &Secret<String> {
+        &self.0
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct TwoFACode(String);
+#[derive(Clone, Debug)]
+pub struct TwoFACode(Secret<String>);
+
+impl PartialEq for TwoFACode {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.expose_secret() == other.0.expose_secret()
+    }
+}
 
 impl TwoFACode {
     /// Parse a 2fa code
     /// ```
+    /// use secrecy::ExposeSecret;
     /// use crate::auth_service::domain::data_stores::{TwoFACode, TwoFACodeError};
     /// let num = 912304;
     /// let valid_two_fa = TwoFACode::parse(num.to_string()).unwrap();
-    /// assert_eq!(valid_two_fa.as_ref().parse::<u32>().unwrap(), num);
+    /// assert_eq!(valid_two_fa.as_ref().expose_secret().parse::<u32>().unwrap(), num);
     ///
     /// // This should fail: passing in a non number
     /// let invalid = TwoFACode::parse("I am not a number".to_string());
@@ -243,7 +259,7 @@ impl TwoFACode {
     pub fn parse(code: String) -> Result<Self> {
         let code_as_u32 = code.parse::<u32>().wrap_err("Invalid UUID")?; // Updated!
         if (100_000..=999_999).contains(&code_as_u32) {
-            Ok(Self(code))
+            Ok(Self(Secret::new(code)))
         } else {
             Err(eyre!("Code out of range"))
         }
@@ -254,10 +270,11 @@ impl Default for TwoFACode {
     /// Use the `rand` crate to generate a random 2FA code.
     /// The code should be 6 digits (ex: 834629)
     /// ```
+    /// use secrecy::ExposeSecret;
     /// use crate::auth_service::domain::data_stores::{TwoFACode};
     /// let default_val = TwoFACode::default();
     /// let val = default_val.as_ref();
-    /// let char_count = val.chars().count();
+    /// let char_count = val.expose_secret().chars().count();
     /// let is_between_0_and_6 = char_count < 7;
     /// assert!(is_between_0_and_6);
     /// ```
@@ -270,8 +287,8 @@ impl Default for TwoFACode {
     }
 }
 
-impl AsRef<str> for TwoFACode {
-    fn as_ref(&self) -> &str {
-        self.0.as_ref()
+impl AsRef<Secret<String>> for TwoFACode {
+    fn as_ref(&self) -> &Secret<String> {
+        &self.0
     }
 }

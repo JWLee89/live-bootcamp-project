@@ -82,6 +82,7 @@ async fn handle_2fa(
         .send_email(&email, subject, two_fa_code.as_ref().expose_secret())
         .await
     {
+        println!("error: {:?}", e);
         return Err(AuthAPIError::UnexpectedError(e.into()));
     }
 

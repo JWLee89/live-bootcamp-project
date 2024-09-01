@@ -3,13 +3,10 @@ use std::sync::Arc;
 use auth_service::{
     app_state::state::AppState,
     domain::{
-        data_stores::{configure_postgresql, configure_redis},
+        data_stores::{configure_postgresql, configure_postmark_email_client, configure_redis},
         redis_two_fa_code_store::RedisTwoFACodeStore,
     },
-    services::{
-        data_stores::PostgresUserStore, mock_email_client::MockEmailClient,
-        redis_banned_token_store::RedisBannedTokenStore,
-    },
+    services::{data_stores::PostgresUserStore, redis_banned_token_store::RedisBannedTokenStore},
     utils::{constants::prod, tracing::init_tracing},
     Application,
 };
@@ -24,7 +21,7 @@ async fn init() {
 
     // Store initializations
     let user_store = Arc::new(RwLock::new(PostgresUserStore::new(pool)));
-    let email_client = Arc::new(RwLock::new(MockEmailClient::default()));
+    let email_client = Arc::new(RwLock::new(configure_postmark_email_client()));
     let banned_token_store = Arc::new(RwLock::new(RedisBannedTokenStore::new(
         redis_connection.clone(),
     )));

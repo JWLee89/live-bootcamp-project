@@ -32,9 +32,9 @@ async fn should_return_422_if_malformed_input(malformed_body: Value) {
     app.clean_up().await;
 }
 
-async fn prepare_200_case() -> (TestApp, Value, Value) {
+async fn prepare_200_case(requires_mock_email_server: bool) -> (TestApp, Value, Value) {
     let enable_2fa = true;
-    let (app, login_body) = prepare_login(enable_2fa).await;
+    let (app, login_body) = prepare_login(enable_2fa, requires_mock_email_server).await;
     let login_body_map = login_body.as_object().unwrap();
     let email = login_body_map.get("email").unwrap().as_str().unwrap();
 
@@ -69,7 +69,7 @@ async fn prepare_200_case() -> (TestApp, Value, Value) {
 
 #[tokio::test]
 async fn should_return_200_if_correct_code() {
-    let (mut app, verify_2fa_body, _) = prepare_200_case().await;
+    let (mut app, verify_2fa_body, _) = prepare_200_case(true).await;
     // This should pass, since we are calling verify-2fa for the first time
     let response_verify_fa = app.verify_2fa(&verify_2fa_body).await;
     _assert_eq_status_code(&response_verify_fa, StatusCode::OK);
@@ -88,7 +88,7 @@ async fn should_return_200_if_correct_code() {
 }))]
 #[tokio::test]
 async fn should_return_401_if_incorrect_credentials(incorrect_body: Value) {
-    let mut app = TestApp::new().await;
+    let (mut app, __, _) = prepare_200_case(true).await;
     let response = app.verify_2fa(&incorrect_body).await;
     _assert_eq_status_code(&response, StatusCode::UNAUTHORIZED);
     app.clean_up().await;
@@ -96,7 +96,7 @@ async fn should_return_401_if_incorrect_credentials(incorrect_body: Value) {
 
 #[tokio::test]
 async fn should_return_401_if_old_code() {
-    let (mut app, verify_2fa_body, _) = prepare_200_case().await;
+    let (mut app, verify_2fa_body, _) = prepare_200_case(true).await;
     // This should pass, since we are calling verify-2fa for the first time
     let response_verify_fa = app.verify_2fa(&verify_2fa_body).await;
     _assert_eq_status_code(&response_verify_fa, StatusCode::OK);

@@ -1,16 +1,21 @@
 use color_eyre::eyre::Result;
 use color_eyre::eyre::{eyre, Context, Report};
 use rand::Rng;
+use reqwest::Client;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
 use thiserror::Error;
 use uuid::Uuid;
 
+use crate::services::postmark_email_client::PostmarkEmailClient;
+use crate::utils::constants::prod::email_client::SENDER;
+use crate::utils::constants::{prod, POSTMARK_AUTH_TOKEN};
 use crate::{
     get_postgres_pool, get_redis_client,
     utils::constants::{DATABASE_URL, REDIS_HOST_NAME},
 };
 
+use super::parse::Parseable;
 use super::{email::Email, password::Password, user::User};
 use std::collections::HashSet;
 
@@ -19,6 +24,21 @@ pub fn configure_redis() -> redis::Connection {
         .expect("Failed to get Redis client")
         .get_connection()
         .expect("Failed to get Redis connection")
+}
+
+// New!
+pub fn configure_postmark_email_client() -> PostmarkEmailClient {
+    let http_client = Client::builder()
+        .timeout(prod::email_client::TIMEOUT)
+        .build()
+        .expect("Failed to build HTTP client");
+
+    PostmarkEmailClient::new(
+        prod::email_client::BASE_URL.to_owned(),
+        Email::parse(Secret::new(SENDER.to_owned())).unwrap(),
+        POSTMARK_AUTH_TOKEN.to_owned(),
+        http_client,
+    )
 }
 
 pub async fn configure_postgresql() -> PgPool {

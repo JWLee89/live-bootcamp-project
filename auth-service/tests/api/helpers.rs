@@ -2,22 +2,27 @@ use std::{str::FromStr, sync::Arc};
 
 use auth_service::{
     app_state::state::{AppState, BannedTokenStoreType, EmailClientType, TwoFACodeStoreType},
-    domain::{data_stores::configure_redis, redis_two_fa_code_store::RedisTwoFACodeStore},
+    domain::{
+        data_stores::configure_redis, email::Email, parse::Parseable,
+        redis_two_fa_code_store::RedisTwoFACodeStore,
+    },
     get_postgres_pool,
     services::{
-        data_stores::PostgresUserStore, mock_email_client::MockEmailClient,
+        data_stores::PostgresUserStore, postmark_email_client::PostmarkEmailClient,
         redis_banned_token_store::RedisBannedTokenStore,
     },
     utils::constants::{test, DATABASE_URL},
     Application,
 };
-use reqwest::{cookie::Jar, StatusCode};
+use reqwest::{cookie::Jar, Client, StatusCode};
+use secrecy::Secret;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     Connection, Executor, PgConnection, PgPool,
 };
 use tokio::sync::RwLock;
 use uuid::Uuid;
+use wiremock::MockServer;
 
 pub struct TestApp {
     pub address: String,
@@ -25,6 +30,7 @@ pub struct TestApp {
     pub clean_up_called: bool,
     pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
+    pub email_server: MockServer,
     pub banned_token_store: BannedTokenStoreType,
     pub two_fa_code_store: TwoFACodeStoreType,
     pub email_client: EmailClientType,
@@ -43,6 +49,20 @@ pub fn _assert_eq_response(response: &reqwest::Response, key: &str, expected_val
     // Note that this can raise an error
     let value = response.headers().get(key).unwrap();
     assert_eq!(value, expected_value);
+}
+
+// New!
+fn configure_postmark_email_client(base_url: String) -> PostmarkEmailClient {
+    let postmark_auth_token = Secret::new("auth_token".to_owned());
+
+    let sender = Email::parse(Secret::new(test::email_client::SENDER.to_owned())).unwrap();
+
+    let http_client = Client::builder()
+        .timeout(test::email_client::TIMEOUT)
+        .build()
+        .expect("Failed to build HTTP client");
+
+    PostmarkEmailClient::new(base_url, sender, postmark_auth_token, http_client)
 }
 
 async fn configure_postgresql(db_name: &str) -> PgPool {
@@ -131,6 +151,10 @@ impl TestApp {
         let db_name = Uuid::new_v4().to_string();
         let redis_connection = Arc::new(RwLock::new(configure_redis()));
         let pg_pool = configure_postgresql(&db_name).await;
+        // Set up a mock email server
+        let email_server = MockServer::start().await; // New!
+        let base_url = email_server.uri(); // New!
+        let email_client = Arc::new(RwLock::new(configure_postmark_email_client(base_url))); // Updated!
 
         // Required stores
         let store = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
@@ -138,7 +162,7 @@ impl TestApp {
             redis_connection.clone(),
         )));
         let two_fa_code_store = Arc::new(RwLock::new(RedisTwoFACodeStore::new(redis_connection)));
-        let email_client = Arc::new(RwLock::new(MockEmailClient::default()));
+        // let email_client = Arc::new(RwLock::new(MockEmailClient::default()));
 
         let app_state: AppState = AppState::new(
             store,
@@ -171,6 +195,7 @@ impl TestApp {
             clean_up_called,
             cookie_jar,
             http_client,
+            email_server,
             banned_token_store,
             two_fa_code_store,
             email_client,

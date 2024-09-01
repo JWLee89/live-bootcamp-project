@@ -6,6 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+reqwest = { version = "0.11.26", default-features = false, features = ["json", "rustls-tls", "cookies"] }
+# Handling secrets
 secrecy = { version = "0.8.0", features = ["serde"] }
 # Error handling
 thiserror = "1.0.58"
@@ -53,4 +55,5 @@ fake = "=2.3.0"
 quickcheck = "0.9.2"
 quickcheck_macros = "0.9.1"
 test-case = "*"
-reqwest = { version = "0.11.26", default-features = false, features = ["json", "cookies"] }
+# Create HTTP Mocks to simulate and test HTTP interactions
+wiremock = "0.6.0"
